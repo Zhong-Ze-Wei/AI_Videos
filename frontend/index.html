@@ -14,7 +14,7 @@
         .step-section { background-color: rgba(17, 24, 39, 0.7); backdrop-filter: blur(10px); border: 1px solid #374151; }
         .control-btn { transition: all 0.3s ease; }
         .control-btn:disabled { background-color: #4B5563; cursor: not-allowed; }
-        .brief-card { background-color: #1F2937; border: 1px solid #4B5563; }
+        .brief-card, .segment-card { background-color: #1F2937; border: 1px solid #4B5563; }
         .prompt-text { scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937; }
         .prompt-text::-webkit-scrollbar { width: 8px; }
         .prompt-text::-webkit-scrollbar-track { background: #1F2937; }
@@ -31,6 +31,9 @@
         .gallery-thumbnail { cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease-in-out; opacity: 0.6; }
         .gallery-thumbnail:hover { opacity: 1; transform: scale(1.05); }
         .gallery-thumbnail.active { border-color: #4F46E5; opacity: 1; transform: scale(1.1); }
+
+        .editable-container textarea { background-color: #111827; border: 1px solid #4f46e5; resize: vertical; }
+        .edit-btn-group { display: none; }
     </style>
 </head>
 <body class="antialiased">
@@ -40,14 +43,31 @@
             <p class="text-xl text-gray-400 mt-3">专业创作工作流</p>
         </header>
 
+        <!-- 新增：创作历史 -->
+        <section id="history-section" class="step-section p-6 rounded-xl mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-3">创作历史</h2>
+            <div id="task-history-list" class="space-y-3 max-h-48 overflow-y-auto">
+                <p id="history-loading" class="text-gray-400">正在加载历史项目...</p>
+            </div>
+        </section>
+
         <!-- 步骤一：全局创意简报 -->
         <section id="step1" class="step-section p-6 rounded-xl mb-8">
             <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-3">第一步：全局创意简报</h2>
             <p class="text-gray-400 mb-6">输入核心定位词，AI将为您生成详细的创作基石。这是保证风格和人物统一的关键。</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <input type="text" id="style-keyword" placeholder="核心美术风格 (如：赛博朋克水墨风)" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <input type="text" id="character-keyword" placeholder="核心角色描述 (如：傲娇男主林泽峰，帅气女主东北雨姐)" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <input type="text" id="world-keyword" placeholder="核心世界观 (如：多雨的亚洲巨型都市)" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label for="style-keyword" class="block mb-2 text-sm font-medium text-gray-300">美术风格</label>
+                    <input type="text" id="style-keyword" placeholder="例如：赛博朋克水墨风" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="character-keyword" class="block mb-2 text-sm font-medium text-gray-300">角色描述</label>
+                    <input type="text" id="character-keyword" placeholder="例如：机械义体侦探" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="world-keyword" class="block mb-2 text-sm font-medium text-gray-300">核心主题</label>
+                    <input type="text" id="world-keyword" placeholder="例如：科技与人性的冲突" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
             </div>
             <button id="generate-brief-btn" class="control-btn w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg">生成创意简报</button>
             <div id="brief-display" class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6"></div>
@@ -72,13 +92,48 @@
             <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-3">第三步：视觉预览</h2>
             <p class="text-gray-400 mb-6">预览根据提示词生成的关键帧图像，检查风格、人物的一致性，确认无误后再进行最终的视频生成。</p>
             <button id="generate-preview-btn" class="control-btn w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg">生成全部预览图</button>
-            <div id="preview-gallery" class="mt-6 hidden">
-                <div id="main-preview-wrapper" class="mb-4 bg-black rounded-lg aspect-video overflow-hidden">
-                    <img id="main-preview-image" src="" alt="主预览图" class="w-full h-full object-contain">
+
+            <div id="preview-gallery" class="mt-6 hidden grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div class="lg:col-span-3 flex flex-col gap-4">
+                    <div id="main-preview-wrapper" class="bg-black rounded-lg aspect-video overflow-hidden flex items-center justify-center">
+                        <img id="main-preview-image" src="" alt="主预览图" class="max-w-full max-h-full object-contain">
+                    </div>
+                    <div id="main-preview-details" class="brief-card p-4 rounded-lg">
+                        <h4 id="preview-segment-title" class="font-bold text-lg text-purple-400 mb-2"></h4>
+                        <p id="preview-segment-action" class="text-gray-300 text-sm mb-3"></p>
+                        <h5 class="font-semibold text-gray-400 text-xs mb-1">最终图像提示词:</h5>
+                        <p id="preview-segment-prompt" class="prompt-text text-xs text-gray-400 h-16 overflow-y-auto bg-gray-800 p-2 rounded"></p>
+                    </div>
                 </div>
-                <div id="thumbnail-strip" class="grid grid-cols-3 md:grid-cols-6 gap-3"></div>
+                <div id="right-preview-panel" class="lg:col-span-2 flex flex-col gap-4">
+                </div>
             </div>
         </section>
+    </div>
+
+    <!-- 最终确认弹窗 -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-gray-900 rounded-xl w-full max-w-4xl h-[90vh] flex flex-col border border-gray-700">
+            <div class="p-4 border-b border-gray-700"><h2 class="text-2xl font-bold text-white">最终确认</h2><p class="text-gray-400">请在生成图像前，最后一次检查并修改您的创意简报和提示词。</p></div>
+            <div class="p-6 flex-grow overflow-y-auto space-y-6">
+                <div>
+                    <h3 class="text-xl font-semibold text-indigo-400 mb-3">全局创意简报</h3>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-300">美术风格</label><textarea id="modal-style" class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea></div>
+                        <div><label class="block text-sm font-medium text-gray-300">角色描述</label><textarea id="modal-character" class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea></div>
+                        <div><label class="block text-sm font-medium text-gray-300">核心主题</label><textarea id="modal-world" class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea></div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-purple-400 mb-3">图像提示词 (6幕)</h3>
+                    <div id="modal-prompts" class="space-y-4"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700 flex justify-end gap-4">
+                <button id="modal-cancel-btn" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded-md">取消</button>
+                <button id="modal-confirm-btn" class="control-btn px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-md">确认并生成</button>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -87,8 +142,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let globalBrief = {};
     let storyData = {};
     let activeChart = null;
+    let previewImageUrls = [];
 
     // --- DOM 元素 ---
+    const taskHistoryList = document.getElementById('task-history-list');
+    const historyLoading = document.getElementById('history-loading');
+    const step1 = document.getElementById('step1');
     const step2 = document.getElementById('step2');
     const step3 = document.getElementById('step3');
     const generateBriefBtn = document.getElementById('generate-brief-btn');
@@ -100,19 +159,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const generatePreviewBtn = document.getElementById('generate-preview-btn');
     const previewGallery = document.getElementById('preview-gallery');
     const mainPreviewImage = document.getElementById('main-preview-image');
-    const thumbnailStrip = document.getElementById('thumbnail-strip');
+    const rightPreviewPanel = document.getElementById('right-preview-panel');
+    const confirmationModal = document.getElementById('confirmation-modal');
+    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const previewSegmentTitle = document.getElementById('preview-segment-title');
+    const previewSegmentAction = document.getElementById('preview-segment-action');
+    const previewSegmentPrompt = document.getElementById('preview-segment-prompt');
 
-    // --- API 调用函数 ---
-    async function apiCall(endpoint, body, button) {
-        button.disabled = true;
-        const originalText = button.textContent;
-        button.textContent = '生成中...';
+    // --- API 调用函数 (已修正) ---
+    async function apiCall(endpoint, method = 'POST', body = null, button = null) {
+        let originalText = '';
+        if(button) {
+            button.disabled = true;
+            originalText = button.textContent;
+            button.textContent = '处理中...';
+        }
         try {
-            const response = await fetch(`http://127.0.0.1:8000${endpoint}`, {
-                method: 'POST',
+            const config = {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
+            };
+            if (body) {
+                config.body = JSON.stringify(body);
+            }
+            const response = await fetch(`http://127.0.0.1:8000${endpoint}`, config);
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.detail || '服务器发生错误');
@@ -122,55 +193,78 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`请求失败: ${error.message}`);
             return null;
         } finally {
-            button.disabled = false;
-            button.textContent = originalText;
+            if(button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
         }
     }
 
-    // --- 步骤一：生成创意简报 ---
-    async function handleGenerateBrief() {
-        const keywords = {
-            style: document.getElementById('style-keyword').value,
-            character: document.getElementById('character-keyword').value,
-            world: document.getElementById('world-keyword').value,
-        };
-        if (!keywords.style || !keywords.character || !keywords.world) {
-            alert('请填写全部三个核心定位词！'); return;
-        }
+    // --- 编辑功能 ---
+    function makeEditable(container, dataObject, key) {
+        const p = container.querySelector('p');
+        const editBtn = container.querySelector('.edit-btn');
+        const btnGroup = container.querySelector('.edit-btn-group');
+        const textarea = document.createElement('textarea');
+        textarea.className = 'w-full p-2 text-sm rounded-md';
+        textarea.value = p.innerText;
+        const confirmBtn = btnGroup.querySelector('.confirm-btn');
+        const cancelBtn = btnGroup.querySelector('.cancel-btn');
+        editBtn.addEventListener('click', () => {
+            textarea.style.height = `${p.offsetHeight + 20}px`;
+            container.insertBefore(textarea, p);
+            p.style.display = 'none';
+            editBtn.style.display = 'none';
+            btnGroup.style.display = 'flex';
+        });
+        cancelBtn.addEventListener('click', () => {
+            container.removeChild(textarea);
+            p.style.display = 'block';
+            editBtn.style.display = 'inline-flex';
+            btnGroup.style.display = 'none';
+        });
+        confirmBtn.addEventListener('click', () => {
+            const newValue = textarea.value;
+            dataObject[key] = newValue;
+            p.innerHTML = newValue.replace(/\n/g, '<br>');
+            container.removeChild(textarea);
+            p.style.display = 'block';
+            editBtn.style.display = 'inline-flex';
+            btnGroup.style.display = 'none';
+        });
+    }
 
-        const result = await apiCall('/generate_brief', keywords, generateBriefBtn);
-        if (result) {
-            globalBrief = result;
-            renderBrief(globalBrief);
-        }
+    function createEditableHTML(title, content, color, dataKey) {
+        return `<div class="brief-card p-4 rounded-lg fade-in editable-container" data-key="${dataKey}"><div class="flex justify-between items-center mb-2"><h3 class="font-bold text-lg ${color}">${title}</h3><button class="edit-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">编辑</button><div class="edit-btn-group space-x-2"><button class="confirm-btn text-xs bg-green-600 hover:bg-green-500 px-2 py-1 rounded">确认</button><button class="cancel-btn text-xs bg-red-600 hover:bg-red-500 px-2 py-1 rounded">取消</button></div></div><p class="text-gray-300 text-sm">${content.replace(/\n/g, '<br>')}</p></div>`;
+    }
+
+    // --- 步骤一 ---
+    async function handleGenerateBrief() {
+        const keywords = { style: document.getElementById('style-keyword').value, character: document.getElementById('character-keyword').value, world: document.getElementById('world-keyword').value };
+        if (!keywords.style || !keywords.character || !keywords.world) { alert('请填写全部三个核心定位词！'); return; }
+        const result = await apiCall('/generate_brief', 'POST', keywords, generateBriefBtn);
+        if (result) { globalBrief = result; renderBrief(globalBrief); }
     }
 
     function renderBrief(brief) {
-        briefDisplay.innerHTML = `
-            <div class="brief-card p-4 rounded-lg fade-in"><h3 class="font-bold text-lg text-indigo-400 mb-2">美术风格</h3><p class="text-gray-300 text-sm">${brief.style.replace(/\n/g, '<br>')}</p></div>
-            <div class="brief-card p-4 rounded-lg fade-in" style="animation-delay: 0.1s;"><h3 class="font-bold text-lg text-green-400 mb-2">角色描述</h3><p class="text-gray-300 text-sm">${brief.character.replace(/\n/g, '<br>')}</p></div>
-            <div class="brief-card p-4 rounded-lg fade-in" style="animation-delay: 0.2s;"><h3 class="font-bold text-lg text-amber-400 mb-2">世界观</h3><p class="text-gray-300 text-sm">${brief.world.replace(/\n/g, '<br>')}</p></div>
-        `;
+        briefDisplay.innerHTML = `${createEditableHTML('美术风格', brief.style, 'text-indigo-400', 'style')}${createEditableHTML('角色描述', brief.character, 'text-green-400', 'character')}${createEditableHTML('核心主题', brief.world, 'text-amber-400', 'world')}`;
+        briefDisplay.querySelectorAll('.editable-container').forEach(c => makeEditable(c, globalBrief, c.dataset.key));
         step2.classList.remove('hidden');
         step2.classList.add('fade-in');
     }
 
-    // --- 步骤二：生成故事剧本 ---
+    // --- 步骤二 ---
     async function handleGenerateStory() {
         const theme = document.getElementById('theme-input').value;
         if (!theme) { alert('请输入故事主题！'); return; }
-
-        const result = await apiCall('/generate_story_details', { brief: globalBrief, theme: theme }, generateStoryBtn);
-        if (result) {
-            storyData = result;
-            renderStory(storyData);
-        }
+        const result = await apiCall('/generate_story_details', 'POST', { brief: globalBrief, theme: theme }, generateStoryBtn);
+        if (result) { storyData = result; renderStory(storyData); }
     }
 
     function renderStory(story) {
         storyDisplay.classList.remove('hidden');
         renderNavigation(story.segments);
-        updateDetailView(story.segments[0].id); // 默认显示第一幕
+        updateDetailView(story.segments[0].id);
         step3.classList.remove('hidden');
         step3.classList.add('fade-in');
     }
@@ -190,30 +284,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateDetailView(segmentId) {
         const segment = storyData.segments.find(s => s.id === segmentId);
         if (!segment) return;
-
-        document.querySelectorAll('.segment-nav-item').forEach(item => {
-            item.classList.toggle('active', parseInt(item.dataset.id) === segmentId);
-        });
-
+        document.querySelectorAll('.segment-nav-item').forEach(item => item.classList.toggle('active', parseInt(item.dataset.id) === segmentId));
         detailView.style.opacity = 0;
         setTimeout(() => {
-            detailView.innerHTML = `
-                <div class="brief-card p-6 rounded-lg"><h3 class="text-2xl font-bold text-white mb-3">${segment.id}. ${segment.title}</h3><p class="text-gray-300 leading-relaxed">${segment.action}</p></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="brief-card p-4 rounded-lg space-y-4">
-                        <h4 class="font-semibold text-gray-200 text-lg border-b border-gray-600 pb-2">数据分析台</h4>
-                        ${createDataBar('叙事张力', segment.analytics.tension, 'bg-indigo-500')}
-                        ${createDataBar('视觉复杂度', segment.analytics.complexity, 'bg-green-500')}
-                        ${createDataBar('叙事节奏', segment.analytics.pacing, 'bg-amber-500')}
-                        <div><h5 class="font-semibold text-gray-300 mb-2 text-center">情感光谱</h5><div class="h-48"><canvas id="detail-chart"></canvas></div></div>
-                    </div>
-                    <div class="brief-card p-4 rounded-lg">
-                        <h4 class="font-semibold text-gray-200 text-lg border-b border-gray-600 pb-2">AI生成指令</h4>
-                        <h5 class="font-semibold text-gray-300 mt-4 mb-2">🖼️ 图像提示词</h5><p class="prompt-text text-sm text-gray-400 h-24 overflow-y-auto bg-gray-800 p-2 rounded">${segment.firstFramePrompt}</p>
-                        <h5 class="font-semibold text-gray-300 mt-4 mb-2">🎥 视频提示词</h5><p class="prompt-text text-sm text-gray-400 h-24 overflow-y-auto bg-gray-800 p-2 rounded">${segment.videoPrompt}</p>
-                    </div>
-                </div>
-            `;
+            detailView.innerHTML = `<div class="brief-card p-6 rounded-lg"><div class="editable-container" data-key="action"><div class="flex justify-between items-center mb-3"><h3 class="text-2xl font-bold text-white">${segment.id}. ${segment.title}</h3><button class="edit-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">编辑</button><div class="edit-btn-group space-x-2"><button class="confirm-btn text-xs bg-green-600 hover:bg-green-500 px-2 py-1 rounded">确认</button><button class="cancel-btn text-xs bg-red-600 hover:bg-red-500 px-2 py-1 rounded">取消</button></div></div><p class="text-gray-300 leading-relaxed">${segment.action}</p></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="brief-card p-4 rounded-lg space-y-4"><h4 class="font-semibold text-gray-200 text-lg border-b border-gray-600 pb-2">数据分析台</h4>${createDataBar('叙事张力', segment.analytics.tension, 'bg-indigo-500')}${createDataBar('视觉复杂度', segment.analytics.complexity, 'bg-green-500')}${createDataBar('叙事节奏', segment.analytics.pacing, 'bg-amber-500')}<div><h5 class="font-semibold text-gray-300 mb-2 text-center">情感光谱</h5><div class="h-48"><canvas id="detail-chart"></canvas></div></div></div><div class="brief-card p-4 rounded-lg"><h4 class="font-semibold text-gray-200 text-lg border-b border-gray-600 pb-2">AI生成指令</h4><div class="editable-container mt-4" data-key="firstFramePrompt"><div class="flex justify-between items-center mb-2"><h5 class="font-semibold text-gray-300">🖼️ 图像提示词</h5><button class="edit-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">编辑</button><div class="edit-btn-group space-x-2"><button class="confirm-btn text-xs bg-green-600 hover:bg-green-500 px-2 py-1 rounded">确认</button><button class="cancel-btn text-xs bg-red-600 hover:bg-red-500 px-2 py-1 rounded">取消</button></div></div><p class="prompt-text text-sm text-gray-400 h-24 overflow-y-auto bg-gray-800 p-2 rounded">${segment.firstFramePrompt}</p></div><div class="editable-container mt-4" data-key="videoPrompt"><div class="flex justify-between items-center mb-2"><h5 class="font-semibold text-gray-300">🎥 视频提示词</h5><button class="edit-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">编辑</button><div class="edit-btn-group space-x-2"><button class="confirm-btn text-xs bg-green-600 hover:bg-green-500 px-2 py-1 rounded">确认</button><button class="cancel-btn text-xs bg-red-600 hover:bg-red-500 px-2 py-1 rounded">取消</button></div></div><p class="prompt-text text-sm text-gray-400 h-24 overflow-y-auto bg-gray-800 p-2 rounded">${segment.videoPrompt}</p></div></div></div>`;
+            detailView.querySelectorAll('.editable-container').forEach(c => makeEditable(c, segment, c.dataset.key));
             if (activeChart) activeChart.destroy();
             const ctx = document.getElementById('detail-chart').getContext('2d');
             activeChart = new Chart(ctx, { type: 'radar', data: { labels: Object.keys(segment.analytics.emotion), datasets: [{ label: '情感', data: Object.values(segment.analytics.emotion), backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1.5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { angleLines: { color: '#4B5563' }, grid: { color: '#4B5563' }, pointLabels: { color: '#D1D5DB', font: { size: 12 } }, suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } } } });
@@ -226,63 +301,162 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<div><div class="flex justify-between items-center mb-1"><span class="text-sm font-medium text-gray-300">${label}</span><span class="text-sm font-bold text-white">${value.toFixed(1)}</span></div><div class="w-full bg-gray-700 rounded-full h-2.5"><div class="${colorClass} h-2.5 rounded-full" style="width: ${percentage}%"></div></div></div>`;
     }
 
-    // --- 步骤三：生成视觉预览 ---
-    async function handleGeneratePreviews() {
-        if (!storyData.segments || storyData.segments.length === 0) {
-            alert('请先生成故事剧本！'); return;
-        }
+    // --- 步骤三 ---
+    function openConfirmationModal() {
+        document.getElementById('modal-style').value = globalBrief.style;
+        document.getElementById('modal-character').value = globalBrief.character;
+        document.getElementById('modal-world').value = globalBrief.world;
+        const promptsContainer = document.getElementById('modal-prompts');
+        promptsContainer.innerHTML = '';
+        storyData.segments.forEach(segment => {
+            promptsContainer.innerHTML += `<div><label class="block text-sm font-medium text-gray-300">第 ${segment.id} 幕: ${segment.title}</label><textarea data-segment-id="${segment.id}" class="w-full h-20 p-2 text-sm rounded-md bg-gray-800 border border-gray-600">${segment.firstFramePrompt}</textarea></div>`;
+        });
+        confirmationModal.classList.remove('hidden');
+    }
 
-        // 根据后端代码，每一幕只生成一张图
+    function closeConfirmationModal() { confirmationModal.classList.add('hidden'); }
+
+    async function confirmAndGenerateImages() {
+        globalBrief.style = document.getElementById('modal-style').value;
+        globalBrief.character = document.getElementById('modal-character').value;
+        globalBrief.world = document.getElementById('modal-world').value;
+        document.querySelectorAll('#modal-prompts textarea').forEach(textarea => {
+            const segment = storyData.segments.find(s => s.id === parseInt(textarea.dataset.segmentId));
+            if (segment) segment.firstFramePrompt = textarea.value;
+        });
+
+        renderBrief(globalBrief);
+        renderStory(storyData);
+
+        closeConfirmationModal();
+
         generatePreviewBtn.textContent = `生成全部预览图 (${storyData.segments.length}张)`;
+        const payload = { title: storyData.title, brief: globalBrief, segments: storyData.segments };
+        const result = await apiCall('/generate_images', 'POST', payload, generatePreviewBtn);
+        if (result && result.image_urls) renderPreviews(result.image_urls);
+    }
 
-        const payload = {
-            brief: globalBrief,
-            segments: storyData.segments
-        };
-        const result = await apiCall('/generate_images', payload, generatePreviewBtn);
-
-        if (result && result.image_urls) {
-            renderPreviews(result.image_urls);
-        }
+    function createPreviewBriefCardHTML(title, content, color) {
+        return `<div class="brief-card p-3 rounded-lg h-28 flex flex-col"><h4 class="font-bold text-sm ${color} mb-2 text-center border-b border-gray-700 pb-1">${title}</h4><p class="prompt-text text-gray-300 text-xs leading-relaxed flex-grow overflow-y-auto">${content.replace(/\n/g, '<br>')}</p></div>`;
     }
 
     function renderPreviews(urls) {
+        previewImageUrls = urls;
         previewGallery.classList.remove('hidden');
-        thumbnailStrip.innerHTML = '';
+
+        const panel = document.getElementById('right-preview-panel');
+        const thumbnailContainer = document.createElement('div');
+        thumbnailContainer.className = 'grid grid-cols-3 gap-3 col-span-3';
+
+        panel.innerHTML = `
+            ${createPreviewBriefCardHTML('美术风格', globalBrief.style, 'text-indigo-400')}
+            ${createPreviewBriefCardHTML('角色描述', globalBrief.character, 'text-green-400')}
+            ${createPreviewBriefCardHTML('核心主题', globalBrief.world, 'text-amber-400')}
+            <div class="col-span-3 text-center text-gray-400 text-sm font-bold tracking-widest">- 关键帧预览 -</div>
+        `;
+
         mainPreviewImage.src = urls[0];
+
         urls.forEach((url, index) => {
+            const segment = storyData.segments[index];
             const thumbWrapper = document.createElement('div');
-            thumbWrapper.className = 'gallery-thumbnail aspect-video bg-gray-800 rounded-lg overflow-hidden';
-            thumbWrapper.dataset.src = url;
+            thumbWrapper.className = 'gallery-thumbnail bg-gray-800 rounded-lg overflow-hidden relative aspect-video';
+            thumbWrapper.dataset.index = index;
+
             const img = document.createElement('img');
             img.src = url;
             img.className = 'w-full h-full object-cover';
             img.alt = `预览图 ${index + 1}`;
-            img.onerror = function() { this.onerror=null; this.src='https://placehold.co/400x225/030712/F9FAFB?text=Error'; };
+            img.onerror = function() { this.onerror=null; this.src='https://placehold.co/160x90/030712/F9FAFB?text=Error'; };
+
+            const titleOverlay = document.createElement('div');
+            titleOverlay.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs text-center py-1';
+            titleOverlay.textContent = `${segment.id}. ${segment.title}`;
+
             thumbWrapper.appendChild(img);
-            thumbnailStrip.appendChild(thumbWrapper);
-            if (index === 0) thumbWrapper.classList.add('active');
+            thumbWrapper.appendChild(titleOverlay);
+            thumbnailContainer.appendChild(thumbWrapper);
+
+            if (index === 0) {
+                thumbWrapper.classList.add('active');
+                updatePreviewDetails(0);
+            }
             thumbWrapper.addEventListener('click', () => switchMainImage(thumbWrapper));
         });
+        panel.appendChild(thumbnailContainer);
     }
 
     function switchMainImage(clickedThumb) {
-        const currentActive = thumbnailStrip.querySelector('.active');
+        const currentActive = document.querySelector('#right-preview-panel .gallery-thumbnail.active');
         if (currentActive === clickedThumb) return;
         if (currentActive) currentActive.classList.remove('active');
         clickedThumb.classList.add('active');
         mainPreviewImage.style.opacity = 0;
+
+        const imageIndex = parseInt(clickedThumb.dataset.index);
+        updatePreviewDetails(imageIndex);
+
         setTimeout(() => {
-            mainPreviewImage.src = clickedThumb.dataset.src;
+            mainPreviewImage.src = previewImageUrls[imageIndex];
             mainPreviewImage.style.opacity = 1;
         }, 300);
+    }
+
+    function updatePreviewDetails(index) {
+        const segment = storyData.segments[index];
+        if(segment) {
+            previewSegmentTitle.textContent = `${segment.id}. ${segment.title}`;
+            previewSegmentAction.textContent = segment.action;
+            previewSegmentPrompt.textContent = segment.firstFramePrompt;
+        }
+    }
+
+    // --- 新增：项目历史 ---
+    async function loadTaskHistory() {
+        const tasks = await apiCall('/tasks', 'GET');
+        if (tasks && tasks.length > 0) {
+            historyLoading.style.display = 'none';
+            taskHistoryList.innerHTML = '';
+            tasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'flex justify-between items-center p-3 bg-gray-800 rounded-lg';
+                taskItem.innerHTML = `<span class="text-gray-300">${task.title}</span><button data-task-name="${task.folder_name}" class="load-task-btn control-btn text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">加载</button>`;
+                taskHistoryList.appendChild(taskItem);
+            });
+            document.querySelectorAll('.load-task-btn').forEach(btn => {
+                btn.addEventListener('click', handleLoadTask);
+            });
+        } else {
+            historyLoading.textContent = '暂无历史项目';
+        }
+    }
+
+    async function handleLoadTask(event) {
+        const taskName = event.target.dataset.taskName;
+        const projectData = await apiCall(`/task/${taskName}`, 'GET', null, event.target);
+        if (projectData) {
+            // 恢复所有状态
+            globalBrief = projectData.brief;
+            storyData = projectData.story;
+            previewImageUrls = projectData.images.image_urls;
+
+            // 渲染所有步骤
+            renderBrief(globalBrief);
+            renderStory(storyData);
+            renderPreviews(previewImageUrls);
+        }
     }
 
     // --- 事件绑定 ---
     generateBriefBtn.addEventListener('click', handleGenerateBrief);
     generateStoryBtn.addEventListener('click', handleGenerateStory);
-    generatePreviewBtn.addEventListener('click', handleGeneratePreviews);
+    generatePreviewBtn.addEventListener('click', openConfirmationModal);
+    modalConfirmBtn.addEventListener('click', confirmAndGenerateImages);
+    modalCancelBtn.addEventListener('click', closeConfirmationModal);
+
+    // --- 页面初始化 ---
+    loadTaskHistory();
 });
 </script>
 </body>
-</html>
+</ht
