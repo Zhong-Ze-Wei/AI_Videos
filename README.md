@@ -51,6 +51,8 @@ Make_Videos_Mvp/
 4. 部署使用： 
    ```bash
    uvicorn main:app --host 0.0.0.0 --port 8000
+   ngrok http 8000
+
    ```
 ### 2. 前端
 1. **直接打开静态页面**:

@@ -7,6 +7,8 @@ import os
 import json
 import asyncio
 import re
+from fastapi.staticfiles import StaticFiles
+import glob # 用于文件查找
 import requests
 from dotenv import load_dotenv
 from openai import OpenAI, APIStatusError, APIConnectionError
@@ -84,9 +86,12 @@ class ProjectData(BaseModel):
 class TaskInfo(BaseModel):
     folder_name: str
     title: str
+    preview_image_url: str | None = None # 新增此行
 
 # --- FastAPI 应用实例 ---
 app = FastAPI()
+# 挂载静态文件目录，允许通过 /static/data/... 的 URL 访问 ../data/ 文件夹下的内容
+app.mount("/static/data", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "..", "data")), name="data")
 
 app.add_middleware(
     CORSMiddleware,
@@ -145,124 +150,218 @@ async def generate_brief_from_ai(keywords: BriefKeywords) -> BriefDetails:
 # 故事生成
 async def generate_story_from_ai(request: StoryRequest) -> AsyncGenerator[str, None]:
     """
-    使用真实的AI模型，通过逐幕生成的方式构建完整故事，以提高稳定性和连贯性。
-    这是一个异步生成器，会逐个yield出JSON字符串。
+    使用“两步走”策略生成故事，并为每一幕动态计算分析指数。
+    第一步：生成包含标题和六幕剧情梗概的整体故事大纲。
+    第二步：对每一幕，先进行创意扩写，然后基于扩写内容进行独立的数据分析。
     """
     if not client:
         raise StopAsyncIteration
 
-    # 第一步：先独立生成一个总标题
+    # --- 第一步：生成宏观的故事大纲和标题 ---
     try:
-        title_prompt = f"为故事主题 '{request.theme}' 起一个富有吸引力的标题，并以JSON格式返回：{{\"title\": \"...\"}}"
-        completion = client.chat.completions.create(
-            model="qwen-plus", messages=[{'role': 'user', 'content': title_prompt}], response_format={"type": "json_object"}
-        )
-        title_data = json.loads(completion.choices[0].message.content)
-        # 流式输出第一条数据：标题
-        yield json.dumps(title_data) + "\n"
-    except Exception as e:
-        print(f"⚠️ 故事总标题生成失败: {e}")
-        yield json.dumps({"title": f"关于“{request.theme}”的故事"}) + "\n"
+        print("--- 正在生成整体故事大纲 ---")
+        overall_plot_prompt = f"""
+        你是一位顶级的电影故事构思师。请基于用户提供的“创意简报”和“故事主题”，创作一个完整、连贯、包含六个幕的短片故事大纲。
 
-    # 第二步：循环生成6个独立的幕
+        [创意简报]
+        - 美术风格: {request.brief.style}
+        - 角色描述: {request.brief.character}
+        - 核心主题: {request.brief.world}
+
+        [故事主题]
+        {request.theme}
+
+        [你的任务]
+        1. 为这个故事起一个富有吸引力的标题。
+        2. 将故事分为清晰的六幕（Act 1 到 Act 6），每一幕都用80-120字详细描述其核心剧情，确保六幕剧情能够连贯地组成一个有起因、发展、高潮和结局的完整故事。
+
+        [输出格式]
+        请严格按照以下JSON格式返回，不要包含任何额外的说明性文本：
+        {{
+          "title": "你的故事标题",
+          "plot_outline": [
+            "第一幕的详细剧情梗概...",
+            "第二幕的详细剧情梗概...",
+            "第三幕的详细剧情梗概...",
+            "第四幕的详细剧情梗概...",
+            "第五幕的详细剧情梗概...",
+            "第六幕的详细剧情梗概..."
+          ]
+        }}
+        """
+        completion = client.chat.completions.create(
+            model="qwen-plus",
+            messages=[{'role': 'user', 'content': overall_plot_prompt}],
+            response_format={"type": "json_object"}
+        )
+        print(f"✅ 整体故事大纲生成成功 - Token 消耗: {completion.usage.total_tokens}")
+
+        story_structure = json.loads(completion.choices[0].message.content)
+        title = story_structure.get("title", f"关于“{request.theme}”的故事")
+        plot_outline = story_structure.get("plot_outline", [])
+
+        if len(plot_outline) != 6:
+            raise ValueError("AI未能生成包含六幕的剧情大纲。")
+
+        yield json.dumps({"title": title}) + "\n"
+
+    except Exception as e:
+        print(f"❌ 关键步骤失败：整体故事大纲生成失败: {e}")
+        yield json.dumps({"error": f"故事大纲生成失败: {e}"}) + "\n"
+        raise StopAsyncIteration
+
+    # --- 第二步：基于大纲，循环生成每一幕的详细信息 ---
     previous_actions = []
     for i in range(1, 7):
-        context = "\n".join(f"- 第{idx+1}幕: {act}" for idx, act in enumerate(previous_actions))
+        context = "\n".join(f"- 第{idx + 1}幕: {act}" for idx, act in enumerate(previous_actions))
+        current_plot_point = plot_outline[i - 1]
 
-        segment_prompt = f"""
-                你是一位资深的电影编剧。基于“创意简报”、“故事主题”和“前情提要”，请仅创作【第 {i} 幕】的内容。
-                需要包含情节描述、数据分析以及用于AI绘画和视频生成的超级详细提示词，其中...
-                [你的任务]
-                请严格按照以下JSON格式返回【第 {i} 幕】的内容，不要包含任何额外文本：
-                {{
-                  "id": {i},
-                  "title": "第{i}幕的标题", 
-                  "action": "第{i}幕的详细情节描述，长度约80-120字，必须承接前情提要。例如：主角在一个阴暗的巷子里发现了线索，随后追踪到一个神秘的组织，然而突然间遭遇了敌人的伏击……", 
-                  "analytics": {{
-                    "tension": 7.5,  # 0到10之间，表示该幕的情节张力
-                    "complexity": 6.2,  # 0到10之间，表示该幕的情节复杂度
-                    "pacing": 5.0,  # 0到10之间，表示该幕的叙事节奏
-                    "emotion": {{
-                      "喜悦": 1.0,  # 0到10之间，表示情感的强度
-                      "悲伤": 3.5,  # 0到10之间，表示情感的强度
-                      "紧张": 7.0,  # 0到10之间，表示情感的强度
-                      "轻松": 0.5  # 0到10之间，表示情感的强度
-                    }}
-                  }},
-                  "firstFramePrompt": "一段详细的、用于生成静态图像的提示词。基于本幕的[action]内容，突出本幕全部内容的特色。例如：画面中可以看到一条阴暗的巷子，湿漉漉的地面反射着昏黄的路灯光，主角正在走过，眼神充满警觉。巷子的两侧是破旧的建筑，远处传来隐约的脚步声……", 
-                  "videoPrompt": "一段详细的、用于生成8秒视频的提示词。基于本幕的[action]内容，在图像提示词的基础上，增加镜头运动（如：推、拉、摇、移）、角色动作、环境动态和整体节奏的描述。例如：镜头从主角的背后拉近，逐渐转向侧面，捕捉到他紧张的表情。地面上的水滴开始闪烁反射，远处突然有一辆黑色车子驶入画面，节奏越来越紧张，音乐逐渐加快，镜头快速跟随主角奔跑……"
+        segment_data = {}
+        try:
+            # --- 步骤 2a: 创意内容生成 ---
+            print(f"--- 正在为第 {i} 幕生成创意内容 ---")
+            creative_prompt = f"""
+            你是一位资深的电影编剧和分镜师。请专注于创作故事的【第 {i} 幕】。
+
+            [本幕核心剧情 - 必须严格遵循]
+            {current_plot_point}
+
+            [你的任务]
+            请严格围绕上方指定的“本幕核心剧情”，将其扩写成一个包含创意内容的JSON对象。
+            `action`字段必须是对“本幕核心剧情”的生动、详细的再创作。
+
+            [输出JSON格式]
+            请严格按照以下JSON格式返回，不要包含任何与分析相关的字段：
+            {{
+              "id": {i},
+              "title": "第{i}幕的简短标题",
+              "action": "对‘本幕核心剧情’进行扩写后的详细情节描述，长度约80-120字...",
+              "firstFramePrompt": "一段详细的、用于生成静态图像的提示词，必须生动地展现本幕的action内容和核心视觉...",
+              "videoPrompt": "一段详细的、用于生成8秒视频的提示词，在图像提示词基础上增加镜头运动、角色动作和环境动态描述..."
+            }}
+            """
+            creative_completion = client.chat.completions.create(
+                model="qwen-plus", messages=[{'role': 'user', 'content': creative_prompt}],
+                response_format={"type": "json_object"}
+            )
+            creative_data = json.loads(creative_completion.choices[0].message.content)
+            segment_data.update(creative_data)
+            print(f"✅ 第 {i} 幕创意内容生成成功。")
+
+            # --- 步骤 2b: 基于 action 内容进行数据分析 ---
+            print(f"--- 正在为第 {i} 幕计算分析指数 ---")
+            action_text_to_analyze = creative_data.get('action', '')
+            analytics_prompt = f"""
+            你是一位专业的叙事数据分析师。请分析以下这段剧情描述，并为其量化各项指数。
+
+            [剧情描述]
+            {action_text_to_analyze}
+
+            [分析维度定义]
+            - tension (叙事张力): 剧情的悬念、冲突和紧张程度。0为平淡，10为极度紧张。
+            - complexity (视觉复杂度): 画面中可能出现的元素、细节和构图的复杂性。0为极简，10为极其复杂。
+            - pacing (叙事节奏): 剧情推进的速度感。0为缓慢/静态，10为极快/蒙太奇。
+            - emotion (情感光谱): 剧情所蕴含的核心情感强度，各项之和不必为10。
+
+            [输出任务]
+            请严格按照以下JSON格式返回分析结果，数值必须是浮点数：
+            {{
+                "tension": 0.0,
+                "complexity": 0.0,
+                "pacing": 0.0,
+                "emotion": {{
+                    "喜悦": 0.0,
+                    "悲伤": 0.0,
+                    "愤怒": 0.0,
+                    "恐惧": 0.0,
+                    "惊讶": 0.0,
+                    "紧张": 0.0
                 }}
-                """
-        messages = [{'role': 'user', 'content': segment_prompt}]
-        max_retries = 3
-        success = False
-        for attempt in range(max_retries):
-            try:
-                print(f"--- 正在生成第 {i} 幕 (第 {attempt + 1} 次尝试) ---")
-                completion = client.chat.completions.create(
-                    model="qwen-plus", messages=messages, response_format={"type": "json_object"}
-                )
-                print(f"✅ 第 {i} 幕生成成功 - Token 消耗: {completion.usage.total_tokens}")
-                segment_data = json.loads(completion.choices[0].message.content)
-                Segment(**segment_data) # 验证格式
-                previous_actions.append(segment_data['action'])
-                # 流式输出这个片段
-                yield json.dumps(segment_data) + "\n"
-                success = True
-                break
-            except (ValidationError, json.JSONDecodeError) as e:
-                print(f"第 {i} 幕第 {attempt + 1} 次尝试失败: {e}")
-                if attempt < max_retries - 1:
-                    messages.append({'role': 'assistant', 'content': completion.choices[0].message.content})
-                    messages.append({'role': 'user', 'content': '你上次返回的文本格式错误，请严格修正并重新生成。'})
-            except Exception as e:
-                yield json.dumps({"error": f"AI服务调用失败: {e}"}) + "\n"
-                raise StopAsyncIteration
-        if not success:
-            yield json.dumps({"error": f"第 {i} 幕生成失败，已达最大重试次数。"}) + "\n"
-            raise StopAsyncIteration
+            }}
+            """
+            analytics_completion = client.chat.completions.create(
+                model="qwen-plus", messages=[{'role': 'user', 'content': analytics_prompt}],
+                response_format={"type": "json_object"}
+            )
+            analytics_data = json.loads(analytics_completion.choices[0].message.content)
+            segment_data['analytics'] = analytics_data
+            print(f"✅ 第 {i} 幕分析指数计算成功。")
 
+            # --- 合并、验证并输出 ---
+            Segment(**segment_data)  # 使用Pydantic模型验证最终合并的数据结构
+            previous_actions.append(segment_data['action'])
+            yield json.dumps(segment_data) + "\n"
+
+        except (ValidationError, json.JSONDecodeError, KeyError) as e:
+            print(f"❌ 第 {i} 幕生成过程中失败: {e}")
+            yield json.dumps({"error": f"第 {i} 幕生成失败: {e}"}) + "\n"
+            # 即使失败，也跳到下一幕，避免整个流程中断
+            continue
+        except Exception as e:
+            yield json.dumps({"error": f"AI服务调用失败: {e}"}) + "\n"
+            raise StopAsyncIteration
 
 # 基于前端传回的背景信息和提示词生成AI绘画的提示词
 async def refine_prompt_with_ai(brief: BriefDetails, segment_prompt: str) -> str:
-    """使用AI将全局设定和单幕Prompt融合成一个优化的最终Prompt。"""
+    """
+    使用“一致性锚点注入法”的全新策略，将全局设定和单幕Prompt融合成一个高度优化的最终Prompt。
+    这个新方法旨在最大化跨图像的角色和风格一致性。
+    """
     if not client:
-        return f"{brief.style}, {brief.character}, {brief.world}, {segment_prompt}"
+        # 如果AI客户端不可用，则退回基础拼接模式
+        return f"{segment_prompt}, {brief.style}, {brief.character}"
 
+    # --- 全新的、更强大的提示词工程策略 ---
     refiner_prompt = f"""
-        你是一位顶级的AI绘画提示词工程师。你的任务是将用户提供的“核心主体”和“参考信息”融合成一个单一、强大、高度优化的提示词字符串，供文生图模型（如Midjourney, Stable Diffusion）使用。
-        
-        [参考信息]
-        - 美术风格: {brief.style}
-        - 角色描述: {brief.character}
-        - 核心主题: {brief.world}
-        
-        [核心主体]
+        你是一位世界顶级的AI绘画提示词（Prompt）架构师，尤其擅长为系列图像创建能保持高度视觉一致性的“母版提示词”。
+        你的任务是基于一个“全局一致性简报”和一个“特定场景描述”，构建一个单一、完整、且高度优化的最终提示词字符串。
+        ---
+        [全局一致性简报 (GLOBAL CONSISTENCY BRIEF)]
+        # 美术风格: {brief.style}
+        # 角色描述: {brief.character}
+        # 核心主题: {brief.world}
+        ---
+        [特定场景描述 (SPECIFIC SCENE PROMPT)]
         {segment_prompt}
-        
-        请遵循以下规则进行融合与优化：
-        1.  **语言一致性是最高优先级**: 必须严格使用与[核心主体]相同的语言（中文）来生成最终的提示词。禁止将内容翻译成英文或任何其他语言。
-        2.  **人物一致性**: 必须严格、完整地使用[角色描述]中的“关键词”来描述角色，这是确保人物在所有画面中保持绝对一致的关键，不可省略或修改。
-        3.  **主体优先**: 最终提示词必须以“核心主体”的内容为绝对核心，清晰地描述画面中的主要人物、动作和场景，适配参考信息中的风格。
-        4.  **注入风格**: 将“参考信息”中的风格、角色和主题的关键描述词（特别是“关键词:”后面的部分）智能地、无缝地融入到核心主体的描述中，以确保视觉一致性。
-        5.  **精炼简洁**: 最终输出的必须是一个单一的字符串，不要包含任何解释、标题或JSON格式。语言要精炼，删除冗余信息。
-        6.  **结构优化**: 按照 "主体描述, 细节补充, 风格和技术性词语" 的结构组织最终的提示词。
-        
-        请直接输出优化后的最终提示词字符串。
+        ---
+        [你的执行步骤 (MANDATORY EXECUTION STEPS)]
+        1.  **识别并提取“一致性锚点”**: 
+            *   **角色锚点 (Character Anchor)**: 从“角色描述”的“关键词:”部分，提取出所有描述核心角色（例如：“旺泽”）外貌和固定装备的关键词。将它们组合成一个不可分割的、极其详细的描述短语。这是确保角色不变的**最高优先级指令**。
+            *   **风格锚点 (Style Anchor)**: 从“美术风格”和“核心主题”的“关键词:”部分，提取出定义世界观和视觉风格的关键词。
+        2.  **构建最终提示词结构**: 
+            你必须严格遵循以下结构，用逗号分隔各个部分：
+            **[主体场景]、[角色锚点注入]、[风格与世界观锚点]、[画质与镜头指令]**
+        3.  **填充结构**:
+            *   **主体场景**: 将“[特定场景描述]”作为核心，生动地描述这一幕中发生的具体事件、环境和人物的动作。
+            *   **角色锚点注入**: 在主体场景描述之后，**必须原封不动地、完整地**插入你提取的“角色锚点”短语。例如：“一只名叫旺泽的短毛柯基犬，头戴镶有银色符文的黑色侠士斗笠，戴着黑框研究生眼镜，颈部佩戴高科技金属项圈，金棕色毛发，情绪激动时尾巴发出橙色光芒”。
+            *   **风格与世界观锚点**: 附加上你提取的“风格锚点”，例如：“东方水墨画风，玄幻未来主义，光影对比强烈，颠倒社会，犬类文明”。
+            *   **画质与镜头指令**: 最后，添加通用的高画质指令，如：“超高细节, 电影级光照, 8K, 杰作, 虚幻引擎渲染”。
+        [输出要求]
+        -   **绝对禁止**任何形式的解释、标题或前言。
+        -   **必须**使用中文进行输出。
+        -   最终结果必须是一个**单一的、由逗号连接的字符串**。
+        [示例]
+        假设“特定场景描述”是“旺泽在一个充满未来感的弄堂里，警惕地发现了一张发光的卷轴”。
+        一个优秀的输出应该是：
+        "在一个充满未来科技感的潮湿弄堂里，一只柯基犬警惕地凝视着地上发光的卷轴, **一只名叫旺泽的短毛柯基犬，头戴镶有银色符文的黑色侠士斗笠，戴着黑框研究生眼镜，颈部佩戴高科技金属项圈，金棕色毛发，情绪激动时尾巴发出橙色光芒**, 东方水墨画风, 玄幻未来主义, 光影对比强烈, 颠倒社会, 犬类文明, 超高细节, 电影级光照, 8K, 杰作, 虚幻引擎渲染"
         """
     try:
         completion = client.chat.completions.create(
             model="qwen-plus",
             messages=[{'role': 'user', 'content': refiner_prompt}]
         )
-        # --- 关键修改：增加Token消耗日志 ---
-        print(f"    - 提示词精炼成功 - Token 消耗: {completion.usage.total_tokens} (输入: {completion.usage.prompt_tokens}, 输出: {completion.usage.completion_tokens})")
+        print(
+            f"    - 提示词精炼成功 - Token 消耗: {completion.usage.total_tokens} (输入: {completion.usage.prompt_tokens}, 输出: {completion.usage.completion_tokens})")
         refined_prompt = completion.choices[0].message.content.strip()
-        return refined_prompt
+        # 确保返回的是单行文本
+        return refined_prompt.replace('\n', ', ').replace('\r', '')
     except Exception as e:
         print(f"    - 提示词精炼失败，将使用原始提示词。错误: {e}")
-        return f"*核心*：{segment_prompt}, *背景参考*：{brief.style}, {brief.character}, {brief.world} "
-
+        # 在失败时，也尝试使用关键词进行拼接
+        style_keywords = brief.style.split('关键词:')[1].split('\n')[0].strip() if '关键词:' in brief.style else ''
+        char_keywords = brief.character.split('关键词:')[1].split('\n')[
+            0].strip() if '关键词:' in brief.character else ''
+        return f"{segment_prompt}, {char_keywords}, {style_keywords}"
 
 # 保存生成图像到本地
 def get_unique_save_directory(base_name: str) -> str:
@@ -321,39 +420,79 @@ async def generate_images_from_ai(request: ImageGenerationRequest) -> ImageRespo
 
     async def controlled_generation(segment):
         async with semaphore:
-            final_prompt = await refine_prompt_with_ai(request.brief, segment.firstFramePrompt)
-            print(f"    - 最终生成提示词: {final_prompt}")
-            safe_title = re.sub(r'[\\/*?:"<>|]', "", segment.title)
-            file_name = f"{segment.id:02d}_{safe_title}.png"
-            file_path = os.path.join(save_directory, file_name)
-            url = await asyncio.to_thread(call_wanx_sync_and_save, final_prompt, QWEN_API_KEY, file_path)
-            await asyncio.sleep(1)
-            return {"final_prompt": final_prompt, "url": url}
+            try:
+                final_prompt = await refine_prompt_with_ai(request.brief, segment.firstFramePrompt)
+                print(f"    - 最终生成提示词 (ID: {segment.id}): {final_prompt}")
+
+                safe_title = re.sub(r'[\\/*?:"<>|]', "", segment.title)
+                file_name = f"{segment.id:02d}_{safe_title}.png"
+                file_path = os.path.join(save_directory, file_name)
+
+                url = await asyncio.to_thread(call_wanx_sync_and_save, final_prompt, QWEN_API_KEY, file_path)
+
+                # 检查返回的 URL 是否是错误占位符
+                if "placehold.co" in url or "Error" in url:
+                    # 如果是错误，我们主动抛出一个异常，以便在 gather 中被捕获
+                    raise Exception(f"图片生成或下载失败 (ID: {segment.id})")
+
+                await asyncio.sleep(1)
+                return {"final_prompt": final_prompt, "url": url}
+            except Exception as e:
+                # 如果单个任务内部发生任何错误，捕获它并返回一个错误对象
+                # 这可以防止 gather 中断
+                print(f"❌ 图片生成任务失败 (ID: {segment.id}): {e}")
+                # 返回一个可识别的错误结果，而不是让异常传播出去
+                return e
 
     for segment in request.segments:
         tasks.append(controlled_generation(segment))
 
     print(f"正在为 {len(tasks)} 个段落生成图片 (并发限制: 2)...")
+
+    # --- 关键修改：添加 return_exceptions=True ---
+    # 这将使 gather 等待所有任务完成，并将异常作为结果返回，而不是直接抛出
+    all_results_or_errors = await asyncio.gather(*tasks, return_exceptions=True)
+
+    print(f"✅ 所有图片生成任务已执行完毕。")
+
+    # --- 后续处理，分离成功和失败的结果 ---
+    successful_results = []
+    failed_tasks_count = 0
+    for result in all_results_or_errors:
+        if isinstance(result, Exception):
+            # 如果结果是一个异常对象，说明这个任务失败了
+            failed_tasks_count += 1
+            # 我们可以选择在这里记录更详细的日志
+        else:
+            # 否则，这是一个成功的结果
+            successful_results.append(result)
+
+    if failed_tasks_count > 0:
+        print(f"⚠️  {failed_tasks_count} 个图片生成任务失败。")
+
+    if not successful_results:
+        # 如果没有任何图片成功，则直接抛出异常
+        raise HTTPException(status_code=500, detail="所有图片生成任务均失败，请检查后端日志。")
+
+    # --- 即使部分失败，也继续保存项目 ---
     try:
-        all_results = await asyncio.gather(*tasks) # 这里只调用一次
-
-        print(f"✅ 所有图片生成完成，共 {len(all_results)} 张。")
-
         project_data = {
             "brief": request.brief.dict(),
             "story": {"title": request.title, "segments": [s.dict() for s in request.segments]},
-            "images": {"image_results": all_results}
+            # 注意：这里我们只保存成功的结果
+            "images": {"image_results": successful_results}
         }
         project_file_path = os.path.join(save_directory, "project_data.json")
         with open(project_file_path, 'w', encoding='utf-8') as f:
             json.dump(project_data, f, ensure_ascii=False, indent=4)
         print(f"✅ 项目数据已保存到: {project_file_path}")
 
-        image_urls = [result['url'] for result in all_results]
+        # 返回给前端的也只有成功的图片URL
+        image_urls = [result['url'] for result in successful_results]
         return ImageResponse(image_urls=image_urls)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"图像生成或项目保存过程中发生错误: {str(e)}")
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"图像生成后，项目保存过程中发生错误: {str(e)}")
 
 # --- API 接口 ---
 @app.post("/generate_brief", response_model=BriefDetails)
@@ -371,20 +510,40 @@ async def generate_images(request: ImageGenerationRequest):
 # --- 新增：项目管理接口 ---
 @app.get("/tasks", response_model=List[TaskInfo])
 async def list_tasks():
-    """列出所有已保存的项目"""
+    """列出所有已保存的项目，并为每个项目附加一张预览图URL"""
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
     if not os.path.exists(data_dir):
         return []
 
     tasks = []
-    for folder_name in os.listdir(data_dir):
-        project_file = os.path.join(data_dir, folder_name, "project_data.json")
-        if os.path.isdir(os.path.join(data_dir, folder_name)) and os.path.exists(project_file):
+    for folder_name in sorted(os.listdir(data_dir), reverse=True):  # 按名称排序，新的在前
+        task_folder_path = os.path.join(data_dir, folder_name)
+        project_file = os.path.join(task_folder_path, "project_data.json")
+
+        if os.path.isdir(task_folder_path) and os.path.exists(project_file):
             try:
                 with open(project_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                    title = data.get("story", {}).get("title", folder_name)
+
+                    # --- 新增：查找预览图 ---
+                    preview_image_url = None
+                    # 查找文件夹下第一个 png 或 jpg 文件
+                    image_files = glob.glob(os.path.join(task_folder_path, "*.png")) + glob.glob(
+                        os.path.join(task_folder_path, "*.jpg"))
+                    if image_files:
+                        # 获取文件名并构建URL
+                        image_name = os.path.basename(image_files[0])
+                        preview_image_url = f"/static/data/{folder_name}/{image_name}"
+                    # -----------------------
+
                     tasks.append(
-                        TaskInfo(folder_name=folder_name, title=data.get("story", {}).get("title", folder_name)))
+                        TaskInfo(
+                            folder_name=folder_name,
+                            title=title,
+                            preview_image_url=preview_image_url  # 附加URL
+                        )
+                    )
             except Exception as e:
                 print(f"读取项目失败 {folder_name}: {e}")
     return tasks
