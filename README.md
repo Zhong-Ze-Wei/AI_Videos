@@ -48,7 +48,10 @@ Make_Videos_Mvp/
    cd backend && python main.py
    ```
    - 服务默认运行在 `http://localhost:8000`。
-
+4. 部署使用： 
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000
+   ```
 ### 2. 前端
 1. **直接打开静态页面**:
    ```bash

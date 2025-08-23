@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
-from typing import List, Dict
+from typing import List, Dict, AsyncGenerator
 import os
 import json
 import asyncio
@@ -142,66 +142,60 @@ async def generate_brief_from_ai(keywords: BriefKeywords) -> BriefDetails:
         raise HTTPException(status_code=500, detail=f"AI 返回格式错误: {str(e)}")
 
 
-# 创建剧情
-async def generate_story_from_ai(request: StoryRequest) -> Story:
+# 故事生成
+async def generate_story_from_ai(request: StoryRequest) -> AsyncGenerator[str, None]:
     """
     使用真实的AI模型，通过逐幕生成的方式构建完整故事，以提高稳定性和连贯性。
+    这是一个异步生成器，会逐个yield出JSON字符串。
     """
     if not client:
-        raise HTTPException(status_code=500, detail="OpenAI 客户端未初始化")
-
-    final_segments = []
-    previous_actions = []
-    story_title = f"关于“{request.theme}”的故事"
+        raise StopAsyncIteration
 
     # 第一步：先独立生成一个总标题
     try:
         title_prompt = f"为故事主题 '{request.theme}' 起一个富有吸引力的标题，并以JSON格式返回：{{\"title\": \"...\"}}"
         completion = client.chat.completions.create(
-            model="qwen-plus", messages=[{'role': 'user', 'content': title_prompt}],
-            response_format={"type": "json_object"}
+            model="qwen-plus", messages=[{'role': 'user', 'content': title_prompt}], response_format={"type": "json_object"}
         )
-        story_title = json.loads(completion.choices[0].message.content).get("title", story_title)
-        print(f"✅ 故事总标题生成成功: {story_title}")
+        title_data = json.loads(completion.choices[0].message.content)
+        # 流式输出第一条数据：标题
+        yield json.dumps(title_data) + "\n"
     except Exception as e:
-        print(f"⚠️ 故事总标题生成失败，将使用默认标题。错误: {e}")
+        print(f"⚠️ 故事总标题生成失败: {e}")
+        yield json.dumps({"title": f"关于“{request.theme}”的故事"}) + "\n"
 
     # 第二步：循环生成6个独立的幕
+    previous_actions = []
     for i in range(1, 7):
-        context = "\n".join(f"- 第{idx + 1}幕: {act}" for idx, act in enumerate(previous_actions))
+        context = "\n".join(f"- 第{idx+1}幕: {act}" for idx, act in enumerate(previous_actions))
 
         segment_prompt = f"""
-        你是一位资深的电影编剧。基于“创意简报”、“故事主题”和“前情提要”，请仅创作【第 {i} 幕】的内容
-        需要包含情节描述、数据分析以及用于AI绘画和视频生成的超级详细提示词，可用于详细单幕画面的细节图像生成和整体视频生成
-        对于 "analytics" 中的 tension, complexity, pacing, 和 emotion 的所有值，请生成 0.0 到 10.0 之间的浮点数值。
-        请严格按照以下JSON格式返回，不要包含任何额外的说明性文本。
-
-        [创意简报]
-        - 美术风格: {request.brief.style}
-        - 角色描述: {request.brief.character}
-        - 世界观: {request.brief.world}
-
-        [故事主题]
-        {request.theme}
-
-        [前情提要]
-        {context if context else "这是故事的开端。"}
-
-        [你的任务]
-        请严格按照以下JSON格式返回【第 {i} 幕】的内容，不要包含任何额外文本：
-        {{
-          "id": {i},
-          "title": "第{i}幕的标题",
-          "action": "第{i}幕的详细情节描述，长度约80-120字，必须承接前情提要。",
-          "analytics": {{ "tension": 0.0, "complexity": 0.0, "pacing": 0.0, "emotion": {{ "喜悦": 0.0, "悲伤": 0.0, "紧张": 0.0, "轻松": 0.0 }} }},
-          "firstFramePrompt": "一段详细的、用于生成静态图像的提示词。基于本幕的[action]内容，突出本幕全部内容的特色。内容具体，画面描述生动，至少100字以上",
-          "videoPrompt": "一段详细的、用于生成8秒视频的提示词。基于本幕的[action]内容，在图像提示词的基础上，增加镜头运动（如：推、拉、摇、移）、角色动作、环境动态和整体节奏的描述，至少150字以上"
-        }}
-        """
-
+                你是一位资深的电影编剧。基于“创意简报”、“故事主题”和“前情提要”，请仅创作【第 {i} 幕】的内容。
+                需要包含情节描述、数据分析以及用于AI绘画和视频生成的超级详细提示词，其中...
+                [你的任务]
+                请严格按照以下JSON格式返回【第 {i} 幕】的内容，不要包含任何额外文本：
+                {{
+                  "id": {i},
+                  "title": "第{i}幕的标题", 
+                  "action": "第{i}幕的详细情节描述，长度约80-120字，必须承接前情提要。例如：主角在一个阴暗的巷子里发现了线索，随后追踪到一个神秘的组织，然而突然间遭遇了敌人的伏击……", 
+                  "analytics": {{
+                    "tension": 7.5,  # 0到10之间，表示该幕的情节张力
+                    "complexity": 6.2,  # 0到10之间，表示该幕的情节复杂度
+                    "pacing": 5.0,  # 0到10之间，表示该幕的叙事节奏
+                    "emotion": {{
+                      "喜悦": 1.0,  # 0到10之间，表示情感的强度
+                      "悲伤": 3.5,  # 0到10之间，表示情感的强度
+                      "紧张": 7.0,  # 0到10之间，表示情感的强度
+                      "轻松": 0.5  # 0到10之间，表示情感的强度
+                    }}
+                  }},
+                  "firstFramePrompt": "一段详细的、用于生成静态图像的提示词。基于本幕的[action]内容，突出本幕全部内容的特色。例如：画面中可以看到一条阴暗的巷子，湿漉漉的地面反射着昏黄的路灯光，主角正在走过，眼神充满警觉。巷子的两侧是破旧的建筑，远处传来隐约的脚步声……", 
+                  "videoPrompt": "一段详细的、用于生成8秒视频的提示词。基于本幕的[action]内容，在图像提示词的基础上，增加镜头运动（如：推、拉、摇、移）、角色动作、环境动态和整体节奏的描述。例如：镜头从主角的背后拉近，逐渐转向侧面，捕捉到他紧张的表情。地面上的水滴开始闪烁反射，远处突然有一辆黑色车子驶入画面，节奏越来越紧张，音乐逐渐加快，镜头快速跟随主角奔跑……"
+                }}
+                """
         messages = [{'role': 'user', 'content': segment_prompt}]
         max_retries = 3
-
+        success = False
         for attempt in range(max_retries):
             try:
                 print(f"--- 正在生成第 {i} 幕 (第 {attempt + 1} 次尝试) ---")
@@ -209,26 +203,24 @@ async def generate_story_from_ai(request: StoryRequest) -> Story:
                     model="qwen-plus", messages=messages, response_format={"type": "json_object"}
                 )
                 print(f"✅ 第 {i} 幕生成成功 - Token 消耗: {completion.usage.total_tokens}")
-
                 segment_data = json.loads(completion.choices[0].message.content)
-                segment_object = Segment(**segment_data)
-
-                final_segments.append(segment_object)
-                previous_actions.append(segment_object.action)
-                break  # 成功则跳出重试循环
+                Segment(**segment_data) # 验证格式
+                previous_actions.append(segment_data['action'])
+                # 流式输出这个片段
+                yield json.dumps(segment_data) + "\n"
+                success = True
+                break
             except (ValidationError, json.JSONDecodeError) as e:
-                print(f"第 {i} 幕第 {attempt + 1} 次尝试失败: AI返回格式错误。错误: {e}")
+                print(f"第 {i} 幕第 {attempt + 1} 次尝试失败: {e}")
                 if attempt < max_retries - 1:
                     messages.append({'role': 'assistant', 'content': completion.choices[0].message.content})
                     messages.append({'role': 'user', 'content': '你上次返回的文本格式错误，请严格修正并重新生成。'})
-                else:
-                    raise HTTPException(status_code=500, detail=f"第 {i} 幕生成失败，已达最大重试次数。")
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"AI 服务调用失败: {str(e)}")
-        else:  # 如果循环正常结束（意味着所有重试都失败了）
-            raise HTTPException(status_code=500, detail=f"第 {i} 幕生成彻底失败。")
-
-    return Story(title=story_title, segments=final_segments)
+                yield json.dumps({"error": f"AI服务调用失败: {e}"}) + "\n"
+                raise StopAsyncIteration
+        if not success:
+            yield json.dumps({"error": f"第 {i} 幕生成失败，已达最大重试次数。"}) + "\n"
+            raise StopAsyncIteration
 
 
 # 基于前端传回的背景信息和提示词生成AI绘画的提示词
@@ -238,7 +230,7 @@ async def refine_prompt_with_ai(brief: BriefDetails, segment_prompt: str) -> str
         return f"{brief.style}, {brief.character}, {brief.world}, {segment_prompt}"
 
     refiner_prompt = f"""
-        你是一位顶级的AI绘画提示词工程师。你的任务是将用户提供的“核心主体”和“参考信息”融合成一个强大、高度优化的提示词字符串，供文生图模型（如Midjourney, Stable Diffusion）使用。
+        你是一位顶级的AI绘画提示词工程师。你的任务是将用户提供的“核心主体”和“参考信息”融合成一个单一、强大、高度优化的提示词字符串，供文生图模型（如Midjourney, Stable Diffusion）使用。
         
         [参考信息]
         - 美术风格: {brief.style}
@@ -249,11 +241,12 @@ async def refine_prompt_with_ai(brief: BriefDetails, segment_prompt: str) -> str
         {segment_prompt}
         
         请遵循以下规则进行融合与优化：
-        1.  **主体优先**: 最终提示词必须以“核心主体”的内容为绝对核心，清晰地描述画面中的主要人物、动作和场景。
-        2.  **注入风格**: 将“参考信息”中的风格、角色和主题的关键描述词全量的融入到核心主体的描述中，确保视觉一致性。
-        3.  **细节强调**: 确保最终提示词中包含统一的美术风格，相应细致的角色描述（不能只用模糊粗略的词）。
-        4.  **精炼简洁**: 最终输出的必须是一个单一的字符串，不要包含任何解释、标题或JSON格式。语言具备高度的细节和细节，避免模糊性形容词。
-        5.  **结构优化**: 按照 "图像美术设计风格词，主体行为描述, 细节全量补充, 风格和技术性词语" 的结构组织最终的提示词。
+        1.  **语言一致性是最高优先级**: 必须严格使用与[核心主体]相同的语言（中文）来生成最终的提示词。禁止将内容翻译成英文或任何其他语言。
+        2.  **人物一致性**: 必须严格、完整地使用[角色描述]中的“关键词”来描述角色，这是确保人物在所有画面中保持绝对一致的关键，不可省略或修改。
+        3.  **主体优先**: 最终提示词必须以“核心主体”的内容为绝对核心，清晰地描述画面中的主要人物、动作和场景，适配参考信息中的风格。
+        4.  **注入风格**: 将“参考信息”中的风格、角色和主题的关键描述词（特别是“关键词:”后面的部分）智能地、无缝地融入到核心主体的描述中，以确保视觉一致性。
+        5.  **精炼简洁**: 最终输出的必须是一个单一的字符串，不要包含任何解释、标题或JSON格式。语言要精炼，删除冗余信息。
+        6.  **结构优化**: 按照 "主体描述, 细节补充, 风格和技术性词语" 的结构组织最终的提示词。
         
         请直接输出优化后的最终提示词字符串。
         """
@@ -335,41 +328,31 @@ async def generate_images_from_ai(request: ImageGenerationRequest) -> ImageRespo
             file_path = os.path.join(save_directory, file_name)
             url = await asyncio.to_thread(call_wanx_sync_and_save, final_prompt, QWEN_API_KEY, file_path)
             await asyncio.sleep(1)
-            return url
+            return {"final_prompt": final_prompt, "url": url}
 
     for segment in request.segments:
         tasks.append(controlled_generation(segment))
 
     print(f"正在为 {len(tasks)} 个段落生成图片 (并发限制: 2)...")
     try:
-        all_urls = await asyncio.gather(*tasks)
-        print(f"✅ 所有图片生成完成，共 {len(all_urls)} 张。")
+        all_results = await asyncio.gather(*tasks) # 这里只调用一次
 
-        # --- 关键修改：重新加入项目数据保存逻辑 ---
+        print(f"✅ 所有图片生成完成，共 {len(all_results)} 张。")
+
         project_data = {
             "brief": request.brief.dict(),
             "story": {"title": request.title, "segments": [s.dict() for s in request.segments]},
-            "images": {"image_urls": all_urls}
+            "images": {"image_results": all_results}
         }
         project_file_path = os.path.join(save_directory, "project_data.json")
         with open(project_file_path, 'w', encoding='utf-8') as f:
             json.dump(project_data, f, ensure_ascii=False, indent=4)
         print(f"✅ 项目数据已保存到: {project_file_path}")
 
-        return ImageResponse(image_urls=all_urls)
+        image_urls = [result['url'] for result in all_results]
+        return ImageResponse(image_urls=image_urls)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"图像生成或项目保存过程中发生错误: {str(e)}")
-
-    for segment in request.segments:
-        tasks.append(controlled_generation(segment))
-
-    print(f"正在为 {len(tasks)} 个段落生成图片 (并发限制: 2)...")
-    try:
-        all_urls = await asyncio.gather(*tasks)
-        print(f"✅ 所有图片生成完成，共 {len(all_urls)} 张。")
-        return ImageResponse(image_urls=all_urls)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"图像生成过程中发生错误: {str(e)}")
 
 
 # --- API 接口 ---
@@ -377,9 +360,9 @@ async def generate_images_from_ai(request: ImageGenerationRequest) -> ImageRespo
 async def generate_brief(keywords: BriefKeywords):
     return await generate_brief_from_ai(keywords)
 
-@app.post("/generate_story_details", response_model=Story)
+@app.post("/generate_story_details")
 async def generate_story_details(request: StoryRequest):
-    return await generate_story_from_ai(request)
+    return StreamingResponse(generate_story_from_ai(request), media_type="application/x-ndjson")
 
 @app.post("/generate_images", response_model=ImageResponse)
 async def generate_images(request: ImageGenerationRequest):
@@ -406,19 +389,36 @@ async def list_tasks():
                 print(f"读取项目失败 {folder_name}: {e}")
     return tasks
 
+
 @app.get("/task/{task_name}", response_model=ProjectData)
 async def load_task(task_name: str):
-    """加载指定的项目数据"""
+    """加载指定的项目数据，同时处理旧数据格式"""
     project_file = os.path.join(os.path.dirname(__file__), "..", "data", task_name, "project_data.json")
     if not os.path.exists(project_file):
         raise HTTPException(status_code=404, detail="项目文件未找到")
     try:
         with open(project_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
+
+            # ====== 修正旧数据格式：同时处理键名和数据类型 ======
+            # 1. 检查是否存在 'images' 字段
+            if 'images' in data:
+                images_data = data['images']
+                # 2. 检查旧的'image_results'字段，如果存在则进行转换
+                if 'image_results' in images_data:
+                    old_results = images_data.pop('image_results')
+                    # 3. 将字典列表转换为字符串列表
+                    new_urls = []
+                    for item in old_results:
+                        if isinstance(item, dict) and 'url' in item:
+                            new_urls.append(item['url'])
+                    images_data['image_urls'] = new_urls
+            # ==================================================
+
             return ProjectData(**data)
     except Exception as e:
+        # 这会捕获所有可能的文件I/O或JSON解析错误
         raise HTTPException(status_code=500, detail=f"加载项目数据失败: {e}")
-
 
 # 用于直接访问前端的根路径
 @app.get("/", response_class=FileResponse)
