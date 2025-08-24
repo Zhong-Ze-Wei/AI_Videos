@@ -1,22 +1,22 @@
-from pydantic import BaseModel
-from typing import List, Dict
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
 
 class Analytics(BaseModel):
-    tension: int
-    complexity: int
-    pacing: int
-    emotion: Dict[str, int]  # <-- 将 List[int] 改为 Dict[str, int]
+    tension: float
+    complexity: float
+    pacing: float
+    emotion: Dict[str, float]
 
 class Segment(BaseModel):
     id: int
     title: str
     action: str
-    styleAnalysis: List[str]
+    styleAnalysis: List[str] = Field(default_factory=list)
     firstFramePrompt: str
     videoPrompt: str
-    imageUrl: str
+    imageUrl: Optional[str] = None # 这个字段现在可以是空的
     analytics: Analytics
 
 class Story(BaseModel):
     title: str
-    segments: List[Segment]
+    segments: List[Segment] = Field(default_factory=list)
