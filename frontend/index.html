@@ -375,15 +375,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderStory(story) {
+        // Ensure the story display area is visible
+        storyDisplay.classList.remove('hidden');
+
+        // Render the entire navigation list from the loaded data
         renderNavigation(story.segments);
+
+        // If segments exist in the loaded data, always show the first one by default.
         if (story.segments && story.segments.length > 0) {
-            const activeNavItem = navigation.querySelector('.segment-nav-item.active');
-            let segmentIdToShow = activeNavItem ? parseInt(activeNavItem.dataset.id) : story.segments[story.segments.length - 1].id;
-            if (story.segments.some(s => s.id === segmentIdToShow)) {
-                updateDetailView(segmentIdToShow);
+            const firstSegmentId = story.segments[0].id;
+            updateDetailView(firstSegmentId); // This explicitly renders the detail view for segment 1
+
+            // Also, ensure Step 3 is visible since we have all the data needed for it
+            if (!step3.classList.contains('fade-in-initialized')) {
+                step3.classList.remove('hidden');
+                step3.classList.add('fade-in');
+                step3.classList.add('fade-in-initialized');
             }
-            step3.classList.remove('hidden');
-            step3.classList.add('fade-in');
         }
     }
 
@@ -558,18 +566,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const projectData = await apiCall(`/task/${taskName}`, 'GET');
         pElement.textContent = originalText;
         if (projectData) {
+            // 1. 加载所有数据
             globalBrief = projectData.brief;
             storyData = projectData.story;
-            previewImageResults = projectData.images.image_urls;
+            previewImageResults = projectData.images?.image_urls || []; // 使用可选链和默认值，防止空值错误
+
+            // 2. 统一处理 UI 的可见性
+            // 确保整个工作流容器可见
+            showWorkflowView(projectData.story.title);
+            // 确保所有步骤的父容器都可见
+            step1.classList.remove('hidden');
+            step2.classList.remove('hidden');
+            step3.classList.remove('hidden');
+
+            // 3. 渲染所有步骤的内容
             renderBrief(globalBrief);
             renderStory(storyData);
-            if (previewImageResults && previewImageResults.length > 0) {
+
+            // 4. 根据是否有图片，精确控制画廊的可见性
+            if (previewImageResults.length > 0) {
                 renderPreviews(previewImageResults);
+                previewGallery.classList.remove('hidden'); // 确保画廊可见
             } else {
-                previewGallery.classList.add('hidden');
-                step3.classList.remove('hidden');
+                previewGallery.classList.add('hidden'); // 隐藏画廊
             }
-            showWorkflowView(projectData.story.title);
+
         } else {
             card.classList.remove('active-project-card');
         }
