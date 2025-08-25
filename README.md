@@ -51,6 +51,7 @@ Make_Videos_Mvp/
 4. 部署使用： 
    ```bash
    uvicorn main:app --host 0.0.0.0 --port 8000
+   cd /d E:\
    ngrok http 8000
 
    ```

@@ -42,7 +42,7 @@ model_for_easy = "qwen-turbo"
 
 
 # 8. AI图像生成 (step3.2)作用: 图像生成模型，根据提示词生成图片。对应代码位置: call_wanx_sync_and_save()
-model_for_image = "wanx2.1-t2i-plus"  #  "wan2.2-t2i-plus"
+model_for_image = "wan2.2-t2i-flash"   # "wanx2.1-t2i-plus"  #  "wan2.2-t2i-plus"
 
 # ====================================================================
 
@@ -354,7 +354,7 @@ async def generate_story_from_ai(request: StoryRequest) -> AsyncGenerator[str, N
                     {{
                         "name": "角色A",
                         "ai_prompt_id": "char_cyberpunk_agent_kai",
-                        "description": "[角色ID]：char_cyberpunk_agent_kai。[一致性指令]：(must always have: short black hair with neon blue highlights, a glowing cybernetic left arm, a visible barcode tattoo on the neck)。[面部视觉档案]：脸型瘦削，下巴有旧伤疤，棱角分明。眼睛是深蓝色电子义眼，瞳孔会发出微弱蓝光，眼角有细微电路纹理。嘴唇紧抿，表情冷峻。[核心特征]：一个冷酷的赛博朋克特工。[身材与体态]：身材精干，肌肉线条明显，总是保持警惕的站姿。[服装与配饰]：黑色战术背心，深灰色高科技长裤。"
+                        "description": "[角色ID]：char_cyberpunk_agent_kai。[一致性指令]：必须始终拥有: 一个发光的赛博义肢左臂, 一枚颈部条形码纹身。[面部视觉档案]：脸型瘦削，下巴有旧伤疤，棱角分明。眼睛是深蓝色电子义眼，瞳孔会发出微弱蓝光，眼角有细微电路纹理。嘴唇紧抿，表情冷峻。[核心特征]：一个冷酷的赛博朋克特工。[身材与体态]：身材精干，肌肉线条明显，总是保持警惕的站姿。[服装与配饰]：黑色战术背心，深灰色高科技长裤。"
                     }}
                 ]
             }}
@@ -693,29 +693,47 @@ async def save_project(request: ProjectSaveRequest):
 @app.get("/tasks", response_model=List[TaskInfo])
 async def list_tasks():
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
-    if not os.path.exists(data_dir): return []
+    if not os.path.exists(data_dir):
+        return []
+
     tasks = []
-    for folder_name in sorted(os.listdir(data_dir), reverse=True):
-        task_folder_path = os.path.join(data_dir, folder_name)
-        project_file = os.path.join(task_folder_path, "project_data.json")
-        if os.path.isdir(task_folder_path) and os.path.exists(project_file):
+    # os.listdir() 返回的是无序的列表
+    # os.path.getmtime() 获取文件的最后修改时间
+
+    # 1. 获取所有文件夹，并按修改时间倒序排序
+    all_folders = [
+        os.path.join(data_dir, f)
+        for f in os.listdir(data_dir)
+        if os.path.isdir(os.path.join(data_dir, f))
+    ]
+    all_folders.sort(key=os.path.getmtime, reverse=True)
+
+    # 2. 遍历排序后的前7个文件夹
+    for folder_path in all_folders[:7]:
+        folder_name = os.path.basename(folder_path)
+        project_file = os.path.join(folder_path, "project_data.json")
+
+        # 确保项目文件存在
+        if os.path.exists(project_file):
             try:
                 with open(project_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     title = data.get("story", {}).get("title", folder_name)
+
+                    # 从项目文件中读取预览图 URL
                     preview_image_url = None
-                    image_files = glob.glob(os.path.join(task_folder_path, "*.png")) + glob.glob(
-                        os.path.join(task_folder_path, "*.jpg"))
-                    if image_files:
-                        image_name = os.path.basename(image_files[0])
-                        preview_image_url = f"/static/data/{folder_name}/{image_name}"
+                    if 'image_urls' in data.get('images', {}):
+                        image_urls = data['images']['image_urls']
+                        if image_urls:
+                            preview_image_url = image_urls[0]
+
                     tasks.append(
                         TaskInfo(folder_name=folder_name, title=title, preview_image_url=preview_image_url)
                     )
             except Exception as e:
                 print(f"读取项目失败 {folder_name}: {e}")
-    return tasks
 
+    return tasks
 
 @app.get("/task/{task_name}", response_model=ProjectData)
 async def load_task(task_name: str):
