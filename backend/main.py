@@ -38,11 +38,11 @@ model_for_hard = "qwen-plus-2025-07-28"     #qwen-plus-2025-07-14   qwen-plus-20
 # 简单模型
 # 3. 核心人物筛查 (step2 - 第二步)作用: 快速检索小助手，判断并提取核心人物。对应代码位置: generate_story_from_ai() -> core_detector_prompt
 # 6. 数据分析与量化 (step2 - 第三步)作用: 专业数据分析师，为剧情量化各项指数。对应代码位置: generate_story_from_ai() -> analytics_prompt
-model_for_easy = "qwen-plus-2025-07-28"     #"qwen-turbo"
+model_for_easy = "qwen-turbo"     #"qwen-turbo"
 
 
 # 8. AI图像生成 (step3.2)作用: 图像生成模型，根据提示词生成图片。对应代码位置: call_wanx_sync_and_save()
-model_for_image = "qwen-image"       # "wanx2.1-t2i-plus" "wan2.2-t2i-plus" "qwen-image"
+model_for_image = "wan2.2-t2i-plus"       # "wanx2.1-t2i-plus" "wan2.2-t2i-plus" "qwen-image"
 
 # ====================================================================
 
@@ -811,3 +811,10 @@ async def read_index():
     if not os.path.exists(frontend_path):
         return {"error": "index.html not found"}
     return FileResponse(frontend_path)
+
+# 添加主入口点，适用于本地运行和 Hugging Face Spaces
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 7860))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
