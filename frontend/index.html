@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,43 +9,159 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap"
+        rel="stylesheet">
     <style>
-        html { scroll-behavior: smooth; }
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: 'Noto Sans SC', sans-serif;
             background-color: #030712;
             color: #F9FAFB;
             background-image: radial-gradient(at 20% 20%, hsla(212, 96%, 15%, 0.3) 0px, transparent 50%),
-                              radial-gradient(at 80% 20%, hsla(284, 96%, 15%, 0.2) 0px, transparent 50%),
-                              radial-gradient(at 20% 80%, hsla(180, 96%, 15%, 0.2) 0px, transparent 50%),
-                              radial-gradient(at 80% 80%, hsla(34, 96%, 15%, 0.2) 0px, transparent 50%);
+                radial-gradient(at 80% 20%, hsla(284, 96%, 15%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 20% 80%, hsla(180, 96%, 15%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, hsla(34, 96%, 15%, 0.2) 0px, transparent 50%);
             background-attachment: fixed;
         }
-        .step-section { background-color: rgba(17, 24, 39, 0.7); backdrop-filter: blur(10px); border: 1px solid #374151; }
-        .control-btn { transition: all 0.3s ease; }
-        .control-btn:disabled { background-color: #4B5563; cursor: not-allowed; }
-        .brief-card, .segment-card, .character-card { background-color: #1F2937; border: 1px solid #4B5563; }
-        .prompt-text { scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937; }
-        .prompt-text::-webkit-scrollbar { width: 8px; }
-        .prompt-text::-webkit-scrollbar-track { background: #1F2937; }
-        .prompt-text::-webkit-scrollbar-thumb { background-color: #4B5563; border-radius: 4px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        .segment-nav-item { transition: all 0.2s ease-in-out; border-left: 4px solid transparent; }
-        .segment-nav-item:hover { background-color: #374151; border-left-color: #4338CA; }
-        .segment-nav-item.active { background-color: #1E1B4B; border-left-color: #4F46E5; }
-        .gallery-thumbnail { cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease-in-out; opacity: 0.6; }
-        .gallery-thumbnail:hover { opacity: 1; transform: scale(1.05); }
-        .gallery-thumbnail.active { border-color: #4F46E5; opacity: 1; transform: scale(1.1); }
-        .entry-card { background-color: rgba(31, 41, 55, 0.8); border: 1px solid #374151; transition: all 0.2s ease-in-out; cursor: pointer; overflow: hidden; position: relative; background-size: cover; background-position: center; }
-        .entry-card::before { content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(to top, rgba(17, 24, 39, 0.9) 0%, rgba(17, 24, 39, 0.5) 60%, transparent 100%); opacity: 0; transition: opacity 0.3s ease; }
-        .entry-card.has-bg::before { opacity: 1; }
-        .entry-card:hover { transform: translateY(-5px); border-color: #4F46E5; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1), 0 4px 6px -2px rgba(79, 70, 229, 0.05); }
-        .active-project-card { border-color: #6366F1; transform: translateY(-5px) scale(1.02); box-shadow: 0 0 20px rgba(99, 102, 241, 0.5); }
-        .card-content { position: relative; z-index: 1; }
+
+        .step-section {
+            background-color: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid #374151;
+        }
+
+        .control-btn {
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:disabled {
+            background-color: #4B5563;
+            cursor: not-allowed;
+        }
+
+        .brief-card,
+        .segment-card,
+        .character-card {
+            background-color: #1F2937;
+            border: 1px solid #4B5563;
+        }
+
+        .prompt-text {
+            scrollbar-width: thin;
+            scrollbar-color: #4B5563 #1F2937;
+        }
+
+        .prompt-text::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .prompt-text::-webkit-scrollbar-track {
+            background: #1F2937;
+        }
+
+        .prompt-text::-webkit-scrollbar-thumb {
+            background-color: #4B5563;
+            border-radius: 4px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .segment-nav-item {
+            transition: all 0.2s ease-in-out;
+            border-left: 4px solid transparent;
+        }
+
+        .segment-nav-item:hover {
+            background-color: #374151;
+            border-left-color: #4338CA;
+        }
+
+        .segment-nav-item.active {
+            background-color: #1E1B4B;
+            border-left-color: #4F46E5;
+        }
+
+        .gallery-thumbnail {
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease-in-out;
+            opacity: 0.6;
+        }
+
+        .gallery-thumbnail:hover {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .gallery-thumbnail.active {
+            border-color: #4F46E5;
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .entry-card {
+            background-color: rgba(31, 41, 55, 0.8);
+            border: 1px solid #374151;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .entry-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(to top, rgba(17, 24, 39, 0.9) 0%, rgba(17, 24, 39, 0.5) 60%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .entry-card.has-bg::before {
+            opacity: 1;
+        }
+
+        .entry-card:hover {
+            transform: translateY(-5px);
+            border-color: #4F46E5;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1), 0 4px 6px -2px rgba(79, 70, 229, 0.05);
+        }
+
+        .active-project-card {
+            border-color: #6366F1;
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .card-content {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
+
 <body class="antialiased">
     <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-screen-2xl">
         <header class="text-center mb-10">
@@ -69,19 +186,32 @@
             <section id="step1" class="step-section p-6 rounded-xl">
                 <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-3">第一步：全局创意简报</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
-                    <div> <label for="style-keyword" class="block mb-2 text-sm font-medium text-gray-300">美术风格</label> <input type="text" id="style-keyword" placeholder="例如：赛博朋克水墨风" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"> </div>
-                    <div> <label for="character-keyword" class="block mb-2 text-sm font-medium text-gray-300">角色描述</label> <input type="text" id="character-keyword" placeholder="例如：机械义体侦探" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"> </div>
-                    <div> <label for="world-keyword" class="block mb-2 text-sm font-medium text-gray-300">核心主题</label> <input type="text" id="world-keyword" placeholder="例如：科技与人性的冲突" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"> </div>
+                    <div> <label for="style-keyword" class="block mb-2 text-sm font-medium text-gray-300">美术风格</label>
+                        <input type="text" id="style-keyword" placeholder="例如：赛博朋克水墨风"
+                            class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div> <label for="character-keyword"
+                            class="block mb-2 text-sm font-medium text-gray-300">角色描述</label> <input type="text"
+                            id="character-keyword" placeholder="例如：机械义体侦探"
+                            class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div> <label for="world-keyword" class="block mb-2 text-sm font-medium text-gray-300">核心主题</label>
+                        <input type="text" id="world-keyword" placeholder="例如：科技与人性的冲突"
+                            class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
                 </div>
-                <button id="generate-brief-btn" class="control-btn w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg">生成创意简报</button>
+                <button id="generate-brief-btn"
+                    class="control-btn w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg">生成创意简报</button>
                 <div id="brief-display" class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6"></div>
             </section>
 
             <section id="step2" class="step-section p-6 rounded-xl hidden">
                 <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-3">第二步：故事大纲与细节</h2>
                 <div class="flex flex-col sm:flex-row gap-4 my-6">
-                    <input type="text" id="theme-input" placeholder="请输入故事主题 (如：追查一个复制人失踪案)" class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    <button id="generate-story-btn" class="control-btn bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg">生成故事剧本</button>
+                    <input type="text" id="theme-input" placeholder="请输入故事主题 (如：追查一个复制人失踪案)"
+                        class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <button id="generate-story-btn"
+                        class="control-btn bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg">生成故事剧本</button>
                 </div>
                 <div id="character-atlas-display" class="my-6 space-y-4 hidden"></div>
 
@@ -93,15 +223,21 @@
 
             <section id="step3" class="step-section p-6 rounded-xl hidden">
                 <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-3">第三步：视觉预览</h2>
-                <button id="generate-preview-btn" class="control-btn w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg mt-6">生成全部预览图</button>
+                <button id="generate-preview-btn"
+                    class="control-btn w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-lg mt-6">生成全部预览图</button>
                 <div id="preview-gallery" class="mt-6 hidden grid grid-cols-1 lg:grid-cols-5 gap-6">
                     <div class="lg:col-span-3 flex flex-col gap-4">
-                        <div id="main-preview-wrapper" class="bg-black rounded-lg aspect-video overflow-hidden flex items-center justify-center"> <img id="main-preview-image" src="" alt="主预览图" class="max-w-full max-h-full object-contain"> </div>
+                        <div id="main-preview-wrapper"
+                            class="bg-black rounded-lg aspect-video overflow-hidden flex items-center justify-center">
+                            <img id="main-preview-image" src="" alt="主预览图" class="max-w-full max-h-full object-contain">
+                        </div>
                         <div id="main-preview-details" class="brief-card p-4 rounded-lg">
                             <h4 id="preview-segment-title" class="font-bold text-lg text-purple-400 mb-2"></h4>
                             <p id="preview-segment-action" class="text-gray-300 text-sm mb-3"></p>
                             <h5 class="font-semibold text-gray-400 text-xs mb-1">最终图像提示词:</h5>
-                            <p id="preview-segment-prompt" class="prompt-text text-xs text-gray-400 h-16 overflow-y-auto bg-gray-800 p-2 rounded"></p>
+                            <p id="preview-segment-prompt"
+                                class="prompt-text text-xs text-gray-400 h-16 overflow-y-auto bg-gray-800 p-2 rounded">
+                            </p>
                         </div>
                     </div>
                     <div id="right-preview-panel" class="lg:col-span-2 flex flex-col gap-4 min-h-[450px]"></div>
@@ -110,16 +246,29 @@
         </div>
     </div>
 
-    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+    <div id="confirmation-modal"
+        class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
         <div class="bg-gray-900 rounded-xl w-full max-w-4xl h-[90vh] flex flex-col border border-gray-700">
-            <div class="p-4 border-b border-gray-700"><h2 class="text-2xl font-bold text-white">最终确认</h2><p class="text-gray-400">请在生成图像前，最后一次检查您的创意简报和提示词。</p></div>
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-2xl font-bold text-white">最终确认</h2>
+                <p class="text-gray-400">请在生成图像前，最后一次检查您的创意简报和提示词。</p>
+            </div>
             <div class="p-6 flex-grow overflow-y-auto space-y-6">
                 <div>
                     <h3 class="text-xl font-semibold text-indigo-400 mb-3">全局创意简报</h3>
                     <div class="space-y-4">
-                        <div><label class="block text-sm font-medium text-gray-300">美术风格</label><textarea id="modal-style" class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea></div>
-                        <div><label class="block text-sm font-medium text-gray-300">角色描述</label><textarea id="modal-character" class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea></div>
-                        <div><label class="block text-sm font-medium text-gray-300">核心主题</label><textarea id="modal-world" class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea></div>
+                        <div><label class="block text-sm font-medium text-gray-300">美术风格</label><textarea
+                                id="modal-style"
+                                class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-300">角色描述</label><textarea
+                                id="modal-character"
+                                class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-300">核心主题</label><textarea
+                                id="modal-world"
+                                class="w-full h-24 p-2 text-sm rounded-md bg-gray-800 border border-gray-600"></textarea>
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -129,99 +278,100 @@
             </div>
             <div class="p-4 border-t border-gray-700 flex justify-end gap-4">
                 <button id="modal-cancel-btn" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded-md">取消</button>
-                <button id="modal-confirm-btn" class="control-btn px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-md">确认并生成</button>
+                <button id="modal-confirm-btn"
+                    class="control-btn px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-md">确认并生成</button>
             </div>
         </div>
     </div>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // --- 全局变量 ---
-    let globalBrief = {};
-    let storyData = {};
-    let charactersData = {};
-    let activeChart = null;
-    let previewImageResults = [];
-    let currentTaskName = ''; // --- NEW: To store the unique task name
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 全局变量 ---
+            let globalBrief = {};
+            let storyData = {};
+            let charactersData = {};
+            let activeChart = null;
+            let previewImageResults = [];
+            let currentTaskName = ''; // --- NEW: To store the unique task name
 
-    // --- DOM 元素获取 ---
-    const characterAtlasDisplay = document.getElementById('character-atlas-display');
-    const entryCenterSection = document.getElementById('entry-center-section');
-    const workflowContainer = document.getElementById('workflow-container');
-    const taskHistoryList = document.getElementById('task-history-list');
-    const historyLoading = document.getElementById('history-loading');
-    const breadcrumbBar = document.getElementById('breadcrumb-bar');
-    const currentProjectTitle = document.getElementById('current-project-title');
-    const step1 = document.getElementById('step1');
-    const step2 = document.getElementById('step2');
-    const step3 = document.getElementById('step3');
-    const generateBriefBtn = document.getElementById('generate-brief-btn');
-    const briefDisplay = document.getElementById('brief-display');
-    const generateStoryBtn = document.getElementById('generate-story-btn');
-    const storyDisplay = document.getElementById('story-display');
-    const detailView = document.getElementById('segment-detail-view');
-    const navigation = document.getElementById('segment-navigation');
-    const generatePreviewBtn = document.getElementById('generate-preview-btn');
-    const previewGallery = document.getElementById('preview-gallery');
-    const mainPreviewImage = document.getElementById('main-preview-image');
-    const rightPreviewPanel = document.getElementById('right-preview-panel');
-    const previewSegmentTitle = document.getElementById('preview-segment-title');
-    const previewSegmentAction = document.getElementById('preview-segment-action');
-    const previewSegmentPrompt = document.getElementById('preview-segment-prompt');
-    const confirmationModal = document.getElementById('confirmation-modal');
-    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+            // --- DOM 元素获取 ---
+            const characterAtlasDisplay = document.getElementById('character-atlas-display');
+            const entryCenterSection = document.getElementById('entry-center-section');
+            const workflowContainer = document.getElementById('workflow-container');
+            const taskHistoryList = document.getElementById('task-history-list');
+            const historyLoading = document.getElementById('history-loading');
+            const breadcrumbBar = document.getElementById('breadcrumb-bar');
+            const currentProjectTitle = document.getElementById('current-project-title');
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+            const generateBriefBtn = document.getElementById('generate-brief-btn');
+            const briefDisplay = document.getElementById('brief-display');
+            const generateStoryBtn = document.getElementById('generate-story-btn');
+            const storyDisplay = document.getElementById('story-display');
+            const detailView = document.getElementById('segment-detail-view');
+            const navigation = document.getElementById('segment-navigation');
+            const generatePreviewBtn = document.getElementById('generate-preview-btn');
+            const previewGallery = document.getElementById('preview-gallery');
+            const mainPreviewImage = document.getElementById('main-preview-image');
+            const rightPreviewPanel = document.getElementById('right-preview-panel');
+            const previewSegmentTitle = document.getElementById('preview-segment-title');
+            const previewSegmentAction = document.getElementById('preview-segment-action');
+            const previewSegmentPrompt = document.getElementById('preview-segment-prompt');
+            const confirmationModal = document.getElementById('confirmation-modal');
+            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+            const modalCancelBtn = document.getElementById('modal-cancel-btn');
 
 
-    // --- 交互函数 ---
-    function showWorkflowView(title) {
-        currentProjectTitle.textContent = title;
-        breadcrumbBar.classList.remove('hidden');
-        workflowContainer.classList.remove('hidden');
-        setTimeout(() => {
-            workflowContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-    }
+            // --- 交互函数 ---
+            function showWorkflowView(title) {
+                currentProjectTitle.textContent = title;
+                breadcrumbBar.classList.remove('hidden');
+                workflowContainer.classList.remove('hidden');
+                setTimeout(() => {
+                    workflowContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
 
-    function startNewWorkflow() {
-        globalBrief = {}; storyData = {}; charactersData = {}; previewImageResults = []; currentTaskName = '';
-        briefDisplay.innerHTML = '';
-        characterAtlasDisplay.innerHTML = '';
-        characterAtlasDisplay.classList.add('hidden');
-        storyDisplay.classList.add('hidden');
-        previewGallery.classList.add('hidden');
-        document.getElementById('style-keyword').value = '';
-        document.getElementById('character-keyword').value = '';
-        document.getElementById('world-keyword').value = '';
-        document.getElementById('theme-input').value = '';
-        step2.classList.add('hidden');
-        step3.classList.add('hidden');
-        document.querySelectorAll('.active-project-card').forEach(c => c.classList.remove('active-project-card'));
-        const newCard = taskHistoryList.querySelector('.new-project-card');
-        if (newCard) newCard.classList.add('active-project-card');
-        showWorkflowView('新的创作');
-    }
+            function startNewWorkflow() {
+                globalBrief = {}; storyData = {}; charactersData = {}; previewImageResults = []; currentTaskName = '';
+                briefDisplay.innerHTML = '';
+                characterAtlasDisplay.innerHTML = '';
+                characterAtlasDisplay.classList.add('hidden');
+                storyDisplay.classList.add('hidden');
+                previewGallery.classList.add('hidden');
+                document.getElementById('style-keyword').value = '';
+                document.getElementById('character-keyword').value = '';
+                document.getElementById('world-keyword').value = '';
+                document.getElementById('theme-input').value = '';
+                step2.classList.add('hidden');
+                step3.classList.add('hidden');
+                document.querySelectorAll('.active-project-card').forEach(c => c.classList.remove('active-project-card'));
+                const newCard = taskHistoryList.querySelector('.new-project-card');
+                if (newCard) newCard.classList.add('active-project-card');
+                showWorkflowView('新的创作');
+            }
 
-    // --- API 调用 (no changes needed) ---
-    async function apiCall(endpoint, method = 'POST', body = null, button = null) {
-        let originalText = '';
-        if (button) { button.disabled = true; originalText = button.textContent; button.textContent = '处理中...'; }
-        try {
-            const config = { method: method, headers: { 'Content-Type': 'application/json' }, };
-            if (body) { config.body = JSON.stringify(body); }
-            const response = await fetch(endpoint, config);
-            if (!response.ok) { const err = await response.json(); throw new Error(err.detail || '服务器发生错误'); }
-            return await response.json();
-        } catch (error) {
-            alert(`请求失败: ${error.message}`);
-            return null;
-        } finally {
-            if (button) { button.disabled = false; button.textContent = originalText; }
-        }
-    }
+            // --- API 调用 (no changes needed) ---
+            async function apiCall(endpoint, method = 'POST', body = null, button = null) {
+                let originalText = '';
+                if (button) { button.disabled = true; originalText = button.textContent; button.textContent = '处理中...'; }
+                try {
+                    const config = { method: method, headers: { 'Content-Type': 'application/json' }, };
+                    if (body) { config.body = JSON.stringify(body); }
+                    const response = await fetch(endpoint, config);
+                    if (!response.ok) { const err = await response.json(); throw new Error(err.detail || '服务器发生错误'); }
+                    return await response.json();
+                } catch (error) {
+                    alert(`请求失败: ${error.message}`);
+                    return null;
+                } finally {
+                    if (button) { button.disabled = false; button.textContent = originalText; }
+                }
+            }
 
-    // --- 编辑功能 (no changes needed) ---
-    function createEditableHTML(title, content, color, dataKey) {
-        return `<div class="brief-card p-4 rounded-lg fade-in editable-container" data-key="${dataKey}">
+            // --- 编辑功能 (no changes needed) ---
+            function createEditableHTML(title, content, color, dataKey) {
+                return `<div class="brief-card p-4 rounded-lg fade-in editable-container" data-key="${dataKey}">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="font-bold text-lg ${color}">${title}</h3>
                         <button class="edit-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">编辑</button>
@@ -232,155 +382,163 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <p class="text-gray-300 text-sm">${content.replace(/\n/g, '<br>')}</p>
                 </div>`;
-    }
-    function makeEditable(container, dataObject, key) {
-        const p = container.querySelector('p');
-        const editBtn = container.querySelector('.edit-btn');
-        const btnGroup = container.querySelector('.edit-btn-group');
-        const textarea = document.createElement('textarea');
-        textarea.className = 'w-full p-2 text-sm rounded-md bg-gray-800 border border-indigo-500';
-        textarea.value = p.innerText;
-        const confirmBtn = btnGroup.querySelector('.confirm-btn');
-        const cancelBtn = btnGroup.querySelector('.cancel-btn');
-        const enterEditMode = () => {
-            textarea.style.height = `${p.offsetHeight + 24}px`;
-            container.insertBefore(textarea, p);
-            p.classList.add('hidden');
-            editBtn.classList.add('hidden');
-            btnGroup.classList.remove('hidden');
-        };
-        const exitEditMode = () => {
-            if(container.contains(textarea)) { container.removeChild(textarea); }
-            p.classList.remove('hidden');
-            editBtn.classList.remove('hidden');
-            btnGroup.classList.add('hidden');
-        };
-        editBtn.addEventListener('click', enterEditMode);
-        cancelBtn.addEventListener('click', exitEditMode);
-        confirmBtn.addEventListener('click', () => {
-            const newValue = textarea.value;
-            dataObject[key] = newValue;
-            p.innerHTML = newValue.replace(/\n/g, '<br>');
-            exitEditMode();
-        });
-    }
+            }
+            function makeEditable(container, dataObject, key) {
+                const p = container.querySelector('p');
+                const editBtn = container.querySelector('.edit-btn');
+                const btnGroup = container.querySelector('.edit-btn-group');
+                const textarea = document.createElement('textarea');
+                textarea.className = 'w-full p-2 text-sm rounded-md bg-gray-800 border border-indigo-500';
+                textarea.value = p.innerText;
+                const confirmBtn = btnGroup.querySelector('.confirm-btn');
+                const cancelBtn = btnGroup.querySelector('.cancel-btn');
+                const enterEditMode = () => {
+                    textarea.style.height = `${p.offsetHeight + 24}px`;
+                    container.insertBefore(textarea, p);
+                    p.classList.add('hidden');
+                    editBtn.classList.add('hidden');
+                    btnGroup.classList.remove('hidden');
+                };
+                const exitEditMode = () => {
+                    if (container.contains(textarea)) { container.removeChild(textarea); }
+                    p.classList.remove('hidden');
+                    editBtn.classList.remove('hidden');
+                    btnGroup.classList.add('hidden');
+                };
+                editBtn.addEventListener('click', enterEditMode);
+                cancelBtn.addEventListener('click', exitEditMode);
+                confirmBtn.addEventListener('click', () => {
+                    const newValue = textarea.value;
+                    dataObject[key] = newValue;
+                    p.innerHTML = newValue.replace(/\n/g, '<br>');
+                    exitEditMode();
+                });
+            }
 
-    // --- 工作流步骤函数 ---
-    async function handleGenerateBrief() {
-        storyDisplay.classList.add('hidden'); step2.classList.add('hidden'); previewGallery.classList.add('hidden'); step3.classList.add('hidden');
-        storyData = {}; previewImageResults = []; charactersData = {};
-        const keywords = { style: document.getElementById('style-keyword').value, character: document.getElementById('character-keyword').value, world: document.getElementById('world-keyword').value };
-        if (!keywords.style || !keywords.character || !keywords.world) { alert('请填写全部三个核心定位词！'); return; }
-        const result = await apiCall('/generate_brief', 'POST', keywords, generateBriefBtn);
-        if (result) { globalBrief = result; renderBrief(globalBrief); }
-    }
+            // --- 工作流步骤函数 ---
+            async function handleGenerateBrief() {
+                storyDisplay.classList.add('hidden'); step2.classList.add('hidden'); previewGallery.classList.add('hidden'); step3.classList.add('hidden');
+                storyData = {}; previewImageResults = []; charactersData = {};
+                const keywords = { style: document.getElementById('style-keyword').value, character: document.getElementById('character-keyword').value, world: document.getElementById('world-keyword').value };
+                if (!keywords.style || !keywords.character || !keywords.world) { alert('请填写全部三个核心定位词！'); return; }
+                const result = await apiCall('/generate_brief', 'POST', keywords, generateBriefBtn);
+                if (result) { globalBrief = result; renderBrief(globalBrief); }
+            }
 
-    function renderBrief(brief) {
-        briefDisplay.innerHTML = `${createEditableHTML('美术风格', brief.style, 'text-indigo-400', 'style')}${createEditableHTML('角色描述', brief.character, 'text-green-400', 'character')}${createEditableHTML('核心主题', brief.world, 'text-amber-400', 'world')}`;
-        briefDisplay.querySelectorAll('.editable-container').forEach(c => makeEditable(c, globalBrief, c.dataset.key));
-        step2.classList.remove('hidden'); step2.classList.add('fade-in');
-    }
+            function renderBrief(brief) {
+                briefDisplay.innerHTML = `${createEditableHTML('美术风格', brief.style, 'text-indigo-400', 'style')}${createEditableHTML('角色描述', brief.character, 'text-green-400', 'character')}${createEditableHTML('核心主题', brief.world, 'text-amber-400', 'world')}`;
+                briefDisplay.querySelectorAll('.editable-container').forEach(c => makeEditable(c, globalBrief, c.dataset.key));
+                step2.classList.remove('hidden'); step2.classList.add('fade-in');
+            }
 
-    async function handleGenerateStory() {
-        previewGallery.classList.add('hidden');
-        step3.classList.add('hidden');
-        previewImageResults = [];
-        step3.classList.remove('fade-in-initialized');
+            async function handleGenerateStory() {
+                previewGallery.classList.add('hidden');
+                step3.classList.add('hidden');
+                previewImageResults = [];
+                step3.classList.remove('fade-in-initialized');
 
-        const theme = document.getElementById('theme-input').value;
-        if (!theme) { alert('请输入故事主题！'); return; }
+                const theme = document.getElementById('theme-input').value;
+                if (!theme) { alert('请输入故事主题！'); return; }
 
-        const button = generateStoryBtn;
-        const originalText = button.textContent;
-        button.disabled = true;
-        button.textContent = '生成中...';
+                const button = generateStoryBtn;
+                const originalText = button.textContent;
+                button.disabled = true;
+                button.textContent = '生成中...';
 
-        storyData = { title: '', segments: [] };
-        charactersData = {};
-        detailView.innerHTML = '';
-        navigation.innerHTML = '';
-        characterAtlasDisplay.innerHTML = '';
-        characterAtlasDisplay.classList.add('hidden');
-        storyDisplay.classList.add('hidden');
+                storyData = { title: '', segments: [] };
+                charactersData = {};
+                detailView.innerHTML = '';
+                navigation.innerHTML = '';
+                characterAtlasDisplay.innerHTML = '';
+                characterAtlasDisplay.classList.add('hidden');
+                storyDisplay.classList.add('hidden');
 
 
-        if (!step3.classList.contains('fade-in-initialized')) {
-            step3.classList.remove('hidden');
-            step3.classList.add('fade-in');
-            step3.classList.add('fade-in-initialized');
-        }
+                // 初始状态下不显示第三步，让它在生成完成后显示
 
-        try {
-            const response = await fetch('/generate_story_details', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ brief: globalBrief, theme: theme })
-            });
+                try {
+                    const response = await fetch('/generate_story_details', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ brief: globalBrief, theme: theme })
+                    });
 
-            if (!response.ok) { const err = await response.json(); throw new Error(err.detail || '服务器发生错误'); }
+                    if (!response.ok) { const err = await response.json(); throw new Error(err.detail || '服务器发生错误'); }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
 
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop();
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
 
-                for (const line of lines) {
-                    if (line.trim() === '') continue;
-                    try {
-                        const jsonData = JSON.parse(line);
-                        if (jsonData.error) { throw new Error(jsonData.error); }
+                        for (const line of lines) {
+                            if (line.trim() === '') continue;
+                            try {
+                                const jsonData = JSON.parse(line);
+                                if (jsonData.error) { throw new Error(jsonData.error); }
 
-                        if (jsonData.title && !jsonData.id) {
-                            storyData.title = jsonData.title;
+                                if (jsonData.title && !jsonData.id) {
+                                    storyData.title = jsonData.title;
+                                    storyData.original_theme = jsonData.original_theme || document.getElementById('theme-input').value;
+                                }
+                                else if (jsonData.characters_data) {
+                                    charactersData = jsonData.characters_data;
+                                    renderCharacterAtlas(charactersData);
+                                }
+                                else if (jsonData.id) { // Handle segment data
+                                    storyDisplay.classList.remove('hidden');
+                                    storyData.segments.push(jsonData);
+                                    storyData.segments.sort((a, b) => a.id - b.id);
+                                    const navItem = document.createElement('div');
+                                    navItem.className = 'segment-nav-item p-3 rounded-md cursor-pointer';
+                                    navItem.dataset.id = jsonData.id;
+                                    navItem.innerHTML = `<h4 class="font-bold text-white">${jsonData.id}. ${jsonData.title}</h4>`;
+                                    navItem.addEventListener('click', () => updateDetailView(jsonData.id));
+                                    navigation.appendChild(navItem);
+                                    updateDetailView(jsonData.id);
+                                }
+                            } catch (e) {
+                                console.error("Failed to parse or process stream line:", line, e);
+                            }
                         }
-                        else if (jsonData.characters_data) {
-                            charactersData = jsonData.characters_data;
-                            renderCharacterAtlas(charactersData);
-                        }
-                        else if (jsonData.id) { // Handle segment data
-                            storyDisplay.classList.remove('hidden');
-                            storyData.segments.push(jsonData);
-                            storyData.segments.sort((a, b) => a.id - b.id);
-                            const navItem = document.createElement('div');
-                            navItem.className = 'segment-nav-item p-3 rounded-md cursor-pointer';
-                            navItem.dataset.id = jsonData.id;
-                            navItem.innerHTML = `<h4 class="font-bold text-white">${jsonData.id}. ${jsonData.title}</h4>`;
-                            navItem.addEventListener('click', () => updateDetailView(jsonData.id));
-                            navigation.appendChild(navItem);
-                            updateDetailView(jsonData.id);
-                        }
-                    } catch (e) {
-                        console.error("Failed to parse or process stream line:", line, e);
+                    }
+                } catch (error) {
+                    alert(`请求失败: ${error.message}`);
+                } finally {
+                    button.disabled = false;
+                    button.textContent = originalText;
+
+                    // 检查故事是否已完整生成，只有在收到所有6个章节后才显示第三步
+                    if (storyData.segments && storyData.segments.length === 6) {
+                        step3.classList.remove('hidden');
+                        step3.classList.add('fade-in');
+                        step3.classList.add('fade-in-initialized');
+                        console.log('已收到全部6个段落，显示第三步视觉预览');
+                    } else {
+                        step3.classList.add('hidden');
+                        console.log(`只收到 ${storyData.segments ? storyData.segments.length : 0} 个段落，暂不显示第三步视觉预览`);
                     }
                 }
             }
-        } catch (error) {
-            alert(`请求失败: ${error.message}`);
-        } finally {
-            button.disabled = false;
-            button.textContent = originalText;
-        }
-    }
 
-    // --- ADDED: New function to render the character atlas ---
-    function renderCharacterAtlas(data) {
-        if (!data || !data.characters || data.characters.length === 0) {
-            characterAtlasDisplay.classList.add('hidden');
-            return;
-        }
+            // --- ADDED: New function to render the character atlas ---
+            function renderCharacterAtlas(data) {
+                if (!data || !data.characters || data.characters.length === 0) {
+                    characterAtlasDisplay.classList.add('hidden');
+                    return;
+                }
 
-        let html = '<h3 class="text-xl font-bold text-white mb-3">角色图谱</h3>';
-        // 移除了父容器的高度限制和滚动条，让其自然伸展
-        html += '<div id="character-card-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
-        data.characters.forEach((char, index) => {
-            html += `
+                let html = '<h3 class="text-xl font-bold text-white mb-3">角色图谱</h3>';
+                // 移除了父容器的高度限制和滚动条，让其自然伸展
+                html += '<div id="character-card-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+                data.characters.forEach((char, index) => {
+                    html += `
                 <div class="character-card p-4 rounded-lg fade-in editable-container" data-index="${index}" data-key="description">
                     <div class="flex justify-between items-center mb-2">
                         <h4 class="font-bold text-lg text-green-400">${char.name}</h4>
@@ -393,56 +551,62 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="prompt-text text-gray-300 text-sm leading-relaxed h-24 overflow-y-auto pr-2">${char.description.replace(/\n/g, '<br>')}</p>
                 </div>
             `;
-        });
-        html += '</div>';
+                });
+                html += '</div>';
 
-        characterAtlasDisplay.innerHTML = html;
-        characterAtlasDisplay.classList.remove('hidden');
-        characterAtlasDisplay.classList.add('fade-in');
+                characterAtlasDisplay.innerHTML = html;
+                characterAtlasDisplay.classList.remove('hidden');
+                characterAtlasDisplay.classList.add('fade-in');
 
-        // 在渲染完成后，为每个角色卡片绑定编辑功能
-        const charContainers = document.getElementById('character-card-container');
-        charContainers.querySelectorAll('.editable-container').forEach(container => {
-            const index = parseInt(container.dataset.index);
-            const key = container.dataset.key;
-            makeEditable(container, charactersData.characters[index], key);
-        });
-    }
-
-    function renderStory(story) {
-        storyDisplay.classList.remove('hidden');
-        renderNavigation(story.segments);
-        if (story.segments && story.segments.length > 0) {
-            const firstSegmentId = story.segments[0].id;
-            updateDetailView(firstSegmentId);
-            if (!step3.classList.contains('fade-in-initialized')) {
-                step3.classList.remove('hidden');
-                step3.classList.add('fade-in');
-                step3.classList.add('fade-in-initialized');
+                // 在渲染完成后，为每个角色卡片绑定编辑功能
+                const charContainers = document.getElementById('character-card-container');
+                charContainers.querySelectorAll('.editable-container').forEach(container => {
+                    const index = parseInt(container.dataset.index);
+                    const key = container.dataset.key;
+                    makeEditable(container, charactersData.characters[index], key);
+                });
             }
-        }
-    }
 
-    // ... (renderNavigation, updateDetailView, createDataBar remain unchanged)
-    function renderNavigation(segments) {
-        navigation.innerHTML = '';
-        (segments || []).forEach(segment => {
-            const navItem = document.createElement('div');
-            navItem.className = 'segment-nav-item p-3 rounded-md cursor-pointer';
-            navItem.dataset.id = segment.id;
-            navItem.innerHTML = `<h4 class="font-bold text-white">${segment.id}. ${segment.title}</h4>`;
-            navItem.addEventListener('click', () => updateDetailView(segment.id));
-            navigation.appendChild(navItem);
-        });
-    }
+            function renderStory(story) {
+                storyDisplay.classList.remove('hidden');
+                renderNavigation(story.segments);
+                if (story.segments && story.segments.length > 0) {
+                    const firstSegmentId = story.segments[0].id;
+                    updateDetailView(firstSegmentId);
+                    // 只有当故事包含完整的6个段落时，才显示第三步
+                    if (story.segments.length === 6) {
+                        if (!step3.classList.contains('fade-in-initialized')) {
+                            step3.classList.remove('hidden');
+                            step3.classList.add('fade-in');
+                            step3.classList.add('fade-in-initialized');
+                        }
+                    } else {
+                        // 如果段落数不足6个，隐藏第三步
+                        step3.classList.add('hidden');
+                    }
+                }
+            }
 
-    function updateDetailView(segmentId) {
-        const segment = storyData.segments.find(s => s.id === segmentId);
-        if (!segment) return;
-        document.querySelectorAll('.segment-nav-item').forEach(item => item.classList.toggle('active', parseInt(item.dataset.id) === segmentId));
-        detailView.style.opacity = 0;
-        setTimeout(() => {
-            detailView.innerHTML = `<div class="brief-card p-6 rounded-lg">
+            // ... (renderNavigation, updateDetailView, createDataBar remain unchanged)
+            function renderNavigation(segments) {
+                navigation.innerHTML = '';
+                (segments || []).forEach(segment => {
+                    const navItem = document.createElement('div');
+                    navItem.className = 'segment-nav-item p-3 rounded-md cursor-pointer';
+                    navItem.dataset.id = segment.id;
+                    navItem.innerHTML = `<h4 class="font-bold text-white">${segment.id}. ${segment.title}</h4>`;
+                    navItem.addEventListener('click', () => updateDetailView(segment.id));
+                    navigation.appendChild(navItem);
+                });
+            }
+
+            function updateDetailView(segmentId) {
+                const segment = storyData.segments.find(s => s.id === segmentId);
+                if (!segment) return;
+                document.querySelectorAll('.segment-nav-item').forEach(item => item.classList.toggle('active', parseInt(item.dataset.id) === segmentId));
+                detailView.style.opacity = 0;
+                setTimeout(() => {
+                    detailView.innerHTML = `<div class="brief-card p-6 rounded-lg">
                     <div class="editable-container" data-key="action">
                         <div class="flex justify-between items-center mb-3"><h3 class="text-2xl font-bold text-white">${segment.id}. ${segment.title}</h3><button class="edit-btn text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">编辑</button><div class="edit-btn-group space-x-2 hidden"><button class="confirm-btn text-xs bg-green-600 hover:bg-green-500 px-2 py-1 rounded">确认</button><button class="cancel-btn text-xs bg-red-600 hover:bg-red-500 px-2 py-1 rounded">取消</button></div></div>
                         <p class="text-gray-300 leading-relaxed">${segment.action}</p>
@@ -468,212 +632,228 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 </div>`;
-            detailView.querySelectorAll('.editable-container').forEach(c => makeEditable(c, segment, c.dataset.key));
-            if (activeChart) activeChart.destroy();
-            const ctx = document.getElementById('detail-chart').getContext('2d');
-            activeChart = new Chart(ctx, { type: 'radar', data: { labels: Object.keys(segment.analytics.emotion), datasets: [{ label: '情感', data: Object.values(segment.analytics.emotion), backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1.5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { angleLines: { color: '#4B5563' }, grid: { color: '#4B5563' }, pointLabels: { color: '#D1D5DB', font: { size: 12 } }, suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } } } });
-            detailView.style.opacity = 1;
-        }, 300);
-    }
-    function createDataBar(label, value, colorClass) {
-        const percentage = (value / 10) * 100;
-        return `<div><div class="flex justify-between items-center mb-1"><span class="text-sm font-medium text-gray-300">${label}</span><span class="text-sm font-bold text-white">${(value || 0).toFixed(1)}</span></div><div class="w-full bg-gray-700 rounded-full h-2.5"><div class="${colorClass} h-2.5 rounded-full" style="width: ${percentage}%"></div></div></div>`;
-    }
-
-
-    function openConfirmationModal() {
-        if (!storyData.segments || storyData.segments.length === 0) { alert('请先生成故事剧本！'); return; }
-        document.getElementById('modal-style').value = globalBrief.style;
-        document.getElementById('modal-character').value = globalBrief.character;
-        document.getElementById('modal-world').value = globalBrief.world;
-        const promptsContainer = document.getElementById('modal-prompts');
-        promptsContainer.innerHTML = '';
-        storyData.segments.forEach(segment => { promptsContainer.innerHTML += `<div><label class="block text-sm font-medium text-gray-300">第 ${segment.id} 幕: ${segment.title}</label><textarea data-segment-id="${segment.id}" class="w-full h-20 p-2 text-sm rounded-md bg-gray-800 border border-gray-600">${segment.firstFramePrompt}</textarea></div>`; });
-        confirmationModal.classList.remove('hidden');
-    }
-
-    function closeConfirmationModal() { confirmationModal.classList.add('hidden'); }
-
-async function confirmAndGenerateImages() {
-        // --- 1. 更新前端的全局数据，以匹配模态框中的修改 ---
-        globalBrief.style = document.getElementById('modal-style').value;
-        globalBrief.character = document.getElementById('modal-character').value;
-        globalBrief.world = document.getElementById('modal-world').value;
-        document.querySelectorAll('#modal-prompts textarea').forEach(textarea => {
-            const segment = storyData.segments.find(s => s.id === parseInt(textarea.dataset.segmentId));
-            if (segment) segment.firstFramePrompt = textarea.value;
-        });
-
-        // --- 2. 渲染更新后的UI并关闭模态框 ---
-        renderBrief(globalBrief);
-        renderStory(storyData);
-        closeConfirmationModal();
-        generatePreviewBtn.textContent = `生成全部预览图 (${storyData.segments.length}张)`;
-
-        // --- 3. 将所有数据发送给后端的新接口（/save_project），以获取一个唯一的任务名 ---
-        const savePayload = {
-            brief: globalBrief,
-            story: storyData,
-            characters_data: charactersData
-        };
-
-        const button = generatePreviewBtn;
-        const originalText = button.textContent;
-
-        // 禁用按钮并显示状态
-        button.disabled = true;
-        button.textContent = '正在保存项目...';
-
-        const saveResult = await apiCall('/save_project', 'POST', savePayload);
-
-        if (!saveResult || !saveResult.task_name) {
-            alert('项目保存失败，无法生成图片。');
-            button.disabled = false;
-            button.textContent = originalText;
-            return;
-        }
-
-        currentTaskName = saveResult.task_name;
-
-        // --- 4. 使用任务名调用图片生成接口，后端会从文件加载数据 ---
-        button.textContent = '正在生成图片...';
-        const generatePayload = { task_name: currentTaskName };
-        const result = await apiCall('/generate_images', 'POST', generatePayload);
-
-        // 恢复按钮状态
-        button.disabled = false;
-        button.textContent = originalText;
-
-        if (result && result.image_urls) {
-            renderPreviews(result.image_urls);
-        } else {
-            alert('图片生成失败，请检查后端日志。');
-        }
-    }
-    // ... (createPreviewBriefCardHTML, renderPreviews, switchMainImage, updatePreviewDetails, loadTaskHistory remain unchanged)
-    function createPreviewBriefCardHTML(title, content, color) { return `<div class="brief-card p-3 rounded-lg h-28 flex flex-col"><h4 class="font-bold text-sm ${color} mb-2 text-center border-b border-gray-700 pb-1">${title}</h4><p class="prompt-text text-gray-300 text-xs leading-relaxed flex-grow overflow-y-auto">${content.replace(/\n/g, '<br>')}</p></div>`; }
-    function renderPreviews(results) {
-        previewImageResults = results;
-        previewGallery.classList.remove('hidden');
-        previewGallery.classList.add('fade-in');
-        const panel = rightPreviewPanel;
-        const thumbnailContainer = document.createElement('div');
-        thumbnailContainer.className = 'grid grid-cols-3 gap-3 col-span-3 flex-grow';
-
-        panel.innerHTML = ` ${createPreviewBriefCardHTML('美术风格', globalBrief.style, 'text-indigo-400')} ${createPreviewBriefCardHTML('角色描述', globalBrief.character, 'text-green-400')} ${createPreviewBriefCardHTML('核心主题', globalBrief.world, 'text-amber-400')} <div class="col-span-3 text-center text-gray-400 text-sm font-bold tracking-widest">- 关键帧预览 -</div> `;
-        mainPreviewImage.src = results.length > 0 ? results[0] : '';
-        results.forEach((result, index) => {
-            const segment = storyData.segments[index];
-            const thumbWrapper = document.createElement('div');
-            thumbWrapper.className = 'gallery-thumbnail bg-gray-800 rounded-lg overflow-hidden relative aspect-video';
-            thumbWrapper.dataset.index = index;
-            const img = document.createElement('img');
-            img.src = result; img.className = 'w-full h-full object-cover';
-            img.alt = `预览图 ${index + 1}`;
-            img.onerror = function () { this.onerror = null; this.src = 'https://placehold.co/160x90/030712/F9FAFB?text=Error'; };
-            const titleOverlay = document.createElement('div');
-            titleOverlay.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs text-center py-1';
-            titleOverlay.textContent = segment ? `${segment.id}. ${segment.title}` : `场景 ${index + 1}`;
-            thumbWrapper.appendChild(img); thumbWrapper.appendChild(titleOverlay);
-            thumbnailContainer.appendChild(thumbWrapper);
-            if (index === 0) { thumbWrapper.classList.add('active'); updatePreviewDetails(0); }
-            thumbWrapper.addEventListener('click', () => switchMainImage(thumbWrapper));
-        });
-        panel.appendChild(thumbnailContainer);
-    }
-    function switchMainImage(clickedThumb) {
-        document.querySelectorAll('#right-preview-panel .gallery-thumbnail.active').forEach(t => t.classList.remove('active'));
-        clickedThumb.classList.add('active');
-        mainPreviewImage.style.opacity = 0;
-        const imageIndex = parseInt(clickedThumb.dataset.index);
-        updatePreviewDetails(imageIndex);
-        setTimeout(() => {
-            mainPreviewImage.src = previewImageResults[imageIndex];
-            mainPreviewImage.style.opacity = 1;
-        }, 300);
-    }
-    function updatePreviewDetails(index) {
-        const segment = storyData.segments[index];
-        if (segment) {
-            previewSegmentTitle.textContent = `${segment.id}. ${segment.title}`;
-            previewSegmentAction.textContent = segment.action;
-            previewSegmentPrompt.textContent = storyData.segments[index].firstFramePrompt;
-        }
-    }
-    async function loadTaskHistory() {
-        taskHistoryList.innerHTML = '';
-        historyLoading.style.display = 'block';
-        const newProjectCard = document.createElement('div');
-        newProjectCard.className = 'entry-card new-project-card rounded-xl p-6 flex flex-col items-center justify-center text-center h-48';
-        newProjectCard.innerHTML = `<div class="card-content"> <svg class="w-16 h-16 text-indigo-400 mb-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg> <h3 class="font-bold text-xl text-white">创建新内容</h3> <p class="text-gray-400 text-sm mt-2">开始一个全新的创作之旅</p> </div>`;
-        newProjectCard.addEventListener('click', startNewWorkflow);
-        taskHistoryList.appendChild(newProjectCard);
-        const tasks = await apiCall('/tasks', 'GET');
-        historyLoading.style.display = 'none';
-        if (tasks && tasks.length > 0) {
-            tasks.forEach(task => {
-                const taskCard = document.createElement('div');
-                taskCard.className = 'entry-card task-history-item rounded-xl p-6 flex flex-col justify-end h-48';
-                taskCard.dataset.taskName = task.folder_name;
-                if (task.preview_image_url) {
-                    taskCard.style.backgroundImage = `url('${task.preview_image_url}')`;
-                    taskCard.classList.add('has-bg');
-                }
-                taskCard.innerHTML = `<div class="card-content"> <h3 class="font-bold text-xl text-white truncate">${task.title}</h3> <p class="text-gray-300 text-sm mt-1">点击加载此项目</p> </div>`;
-                taskCard.addEventListener('click', (e) => handleLoadTask(e));
-                taskHistoryList.appendChild(taskCard);
-            });
-        }
-    }
-
-
-    async function handleLoadTask(event) {
-        const card = event.currentTarget;
-        document.querySelectorAll('.active-project-card').forEach(c => c.classList.remove('active-project-card'));
-        card.classList.add('active-project-card');
-        const taskName = card.dataset.taskName;
-        const pElement = card.querySelector('.card-content p');
-        const originalText = pElement.textContent;
-        pElement.textContent = '加载中...';
-        const projectData = await apiCall(`/task/${taskName}`, 'GET');
-        pElement.textContent = originalText;
-        if (projectData) {
-            // --- MODIFIED: Load all data including the new character atlas ---
-            globalBrief = projectData.brief;
-            storyData = projectData.story;
-            charactersData = projectData.characters_data || { characters: [] }; // Handle old projects
-            previewImageResults = projectData.images?.image_urls || [];
-            currentTaskName = taskName; // Store the task name
-            showWorkflowView(projectData.story.title);
-            step1.classList.remove('hidden');
-            step2.classList.remove('hidden');
-            step3.classList.remove('hidden');
-
-            // Render all components
-            renderBrief(globalBrief);
-            renderCharacterAtlas(charactersData); // Render the character atlas
-            renderStory(storyData);
-
-            if (previewImageResults.length > 0) {
-                renderPreviews(previewImageResults);
-                previewGallery.classList.remove('hidden');
-            } else {
-                previewGallery.classList.add('hidden');
+                    detailView.querySelectorAll('.editable-container').forEach(c => makeEditable(c, segment, c.dataset.key));
+                    if (activeChart) activeChart.destroy();
+                    const ctx = document.getElementById('detail-chart').getContext('2d');
+                    activeChart = new Chart(ctx, { type: 'radar', data: { labels: Object.keys(segment.analytics.emotion), datasets: [{ label: '情感', data: Object.values(segment.analytics.emotion), backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1.5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { angleLines: { color: '#4B5563' }, grid: { color: '#4B5563' }, pointLabels: { color: '#D1D5DB', font: { size: 12 } }, suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } } } });
+                    detailView.style.opacity = 1;
+                }, 300);
+            }
+            function createDataBar(label, value, colorClass) {
+                const percentage = (value / 10) * 100;
+                return `<div><div class="flex justify-between items-center mb-1"><span class="text-sm font-medium text-gray-300">${label}</span><span class="text-sm font-bold text-white">${(value || 0).toFixed(1)}</span></div><div class="w-full bg-gray-700 rounded-full h-2.5"><div class="${colorClass} h-2.5 rounded-full" style="width: ${percentage}%"></div></div></div>`;
             }
 
-        } else {
-            card.classList.remove('active-project-card');
-        }
-    }
 
-    // --- 事件监听器 ---
-    generateBriefBtn.addEventListener('click', handleGenerateBrief);
-    generateStoryBtn.addEventListener('click', handleGenerateStory);
-    generatePreviewBtn.addEventListener('click', openConfirmationModal);
-    modalConfirmBtn.addEventListener('click', confirmAndGenerateImages);
-    modalCancelBtn.addEventListener('click', closeConfirmationModal);
-    loadTaskHistory();
-});
-</script>
+            function openConfirmationModal() {
+                if (!storyData.segments || storyData.segments.length === 0) { alert('请先生成故事剧本！'); return; }
+                document.getElementById('modal-style').value = globalBrief.style;
+                document.getElementById('modal-character').value = globalBrief.character;
+                document.getElementById('modal-world').value = globalBrief.world;
+                const promptsContainer = document.getElementById('modal-prompts');
+                promptsContainer.innerHTML = '';
+                storyData.segments.forEach(segment => { promptsContainer.innerHTML += `<div><label class="block text-sm font-medium text-gray-300">第 ${segment.id} 幕: ${segment.title}</label><textarea data-segment-id="${segment.id}" class="w-full h-20 p-2 text-sm rounded-md bg-gray-800 border border-gray-600">${segment.firstFramePrompt}</textarea></div>`; });
+                confirmationModal.classList.remove('hidden');
+            }
+
+            function closeConfirmationModal() { confirmationModal.classList.add('hidden'); }
+
+            async function confirmAndGenerateImages() {
+                // --- 1. 更新前端的全局数据，以匹配模态框中的修改 ---
+                globalBrief.style = document.getElementById('modal-style').value;
+                globalBrief.character = document.getElementById('modal-character').value;
+                globalBrief.world = document.getElementById('modal-world').value;
+                document.querySelectorAll('#modal-prompts textarea').forEach(textarea => {
+                    const segment = storyData.segments.find(s => s.id === parseInt(textarea.dataset.segmentId));
+                    if (segment) segment.firstFramePrompt = textarea.value;
+                });
+
+                // --- 2. 渲染更新后的UI并关闭模态框 ---
+                renderBrief(globalBrief);
+                renderStory(storyData);
+                closeConfirmationModal();
+                generatePreviewBtn.textContent = `生成全部预览图 (${storyData.segments.length}张)`;
+
+                // --- 3. 将所有数据发送给后端的新接口（/save_project），以获取一个唯一的任务名 ---
+                const savePayload = {
+                    brief: {
+                        ...globalBrief,
+                        original_style_keywords: document.getElementById('style-keyword').value,
+                        original_character_keywords: document.getElementById('character-keyword').value,
+                        original_world_keywords: document.getElementById('world-keyword').value
+                    },
+                    story: {
+                        ...storyData,
+                        original_theme: document.getElementById('theme-input').value
+                    },
+                    characters_data: charactersData
+                };
+
+                const button = generatePreviewBtn;
+                const originalText = button.textContent;
+
+                // 禁用按钮并显示状态
+                button.disabled = true;
+                button.textContent = '正在保存项目...';
+
+                const saveResult = await apiCall('/save_project', 'POST', savePayload);
+
+                if (!saveResult || !saveResult.task_name) {
+                    alert('项目保存失败，无法生成图片。');
+                    button.disabled = false;
+                    button.textContent = originalText;
+                    return;
+                }
+
+                currentTaskName = saveResult.task_name;
+
+                // --- 4. 使用任务名调用图片生成接口，后端会从文件加载数据 ---
+                button.textContent = '正在生成图片...';
+                const generatePayload = { task_name: currentTaskName };
+                const result = await apiCall('/generate_images', 'POST', generatePayload);
+
+                // 恢复按钮状态
+                button.disabled = false;
+                button.textContent = originalText;
+
+                if (result && result.image_urls) {
+                    renderPreviews(result.image_urls);
+                } else {
+                    alert('图片生成失败，请检查后端日志。');
+                }
+            }
+            // ... (createPreviewBriefCardHTML, renderPreviews, switchMainImage, updatePreviewDetails, loadTaskHistory remain unchanged)
+            function createPreviewBriefCardHTML(title, content, color) { return `<div class="brief-card p-3 rounded-lg h-28 flex flex-col"><h4 class="font-bold text-sm ${color} mb-2 text-center border-b border-gray-700 pb-1">${title}</h4><p class="prompt-text text-gray-300 text-xs leading-relaxed flex-grow overflow-y-auto">${content.replace(/\n/g, '<br>')}</p></div>`; }
+            function renderPreviews(results) {
+                previewImageResults = results;
+                previewGallery.classList.remove('hidden');
+                previewGallery.classList.add('fade-in');
+                const panel = rightPreviewPanel;
+                const thumbnailContainer = document.createElement('div');
+                thumbnailContainer.className = 'grid grid-cols-3 gap-3 col-span-3 flex-grow';
+
+                panel.innerHTML = ` ${createPreviewBriefCardHTML('美术风格', globalBrief.style, 'text-indigo-400')} ${createPreviewBriefCardHTML('角色描述', globalBrief.character, 'text-green-400')} ${createPreviewBriefCardHTML('核心主题', globalBrief.world, 'text-amber-400')} <div class="col-span-3 text-center text-gray-400 text-sm font-bold tracking-widest">- 关键帧预览 -</div> `;
+                mainPreviewImage.src = results.length > 0 ? results[0] : '';
+                results.forEach((result, index) => {
+                    const segment = storyData.segments[index];
+                    const thumbWrapper = document.createElement('div');
+                    thumbWrapper.className = 'gallery-thumbnail bg-gray-800 rounded-lg overflow-hidden relative aspect-video';
+                    thumbWrapper.dataset.index = index;
+                    const img = document.createElement('img');
+                    img.src = result; img.className = 'w-full h-full object-cover';
+                    img.alt = `预览图 ${index + 1}`;
+                    img.onerror = function () { this.onerror = null; this.src = 'https://placehold.co/160x90/030712/F9FAFB?text=Error'; };
+                    const titleOverlay = document.createElement('div');
+                    titleOverlay.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs text-center py-1';
+                    titleOverlay.textContent = segment ? `${segment.id}. ${segment.title}` : `场景 ${index + 1}`;
+                    thumbWrapper.appendChild(img); thumbWrapper.appendChild(titleOverlay);
+                    thumbnailContainer.appendChild(thumbWrapper);
+                    if (index === 0) { thumbWrapper.classList.add('active'); updatePreviewDetails(0); }
+                    thumbWrapper.addEventListener('click', () => switchMainImage(thumbWrapper));
+                });
+                panel.appendChild(thumbnailContainer);
+            }
+            function switchMainImage(clickedThumb) {
+                document.querySelectorAll('#right-preview-panel .gallery-thumbnail.active').forEach(t => t.classList.remove('active'));
+                clickedThumb.classList.add('active');
+                mainPreviewImage.style.opacity = 0;
+                const imageIndex = parseInt(clickedThumb.dataset.index);
+                updatePreviewDetails(imageIndex);
+                setTimeout(() => {
+                    mainPreviewImage.src = previewImageResults[imageIndex];
+                    mainPreviewImage.style.opacity = 1;
+                }, 300);
+            }
+            function updatePreviewDetails(index) {
+                const segment = storyData.segments[index];
+                if (segment) {
+                    previewSegmentTitle.textContent = `${segment.id}. ${segment.title}`;
+                    previewSegmentAction.textContent = segment.action;
+                    previewSegmentPrompt.textContent = storyData.segments[index].firstFramePrompt;
+                }
+            }
+            async function loadTaskHistory() {
+                taskHistoryList.innerHTML = '';
+                historyLoading.style.display = 'block';
+                const newProjectCard = document.createElement('div');
+                newProjectCard.className = 'entry-card new-project-card rounded-xl p-6 flex flex-col items-center justify-center text-center h-48';
+                newProjectCard.innerHTML = `<div class="card-content"> <svg class="w-16 h-16 text-indigo-400 mb-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg> <h3 class="font-bold text-xl text-white">创建新内容</h3> <p class="text-gray-400 text-sm mt-2">开始一个全新的创作之旅</p> </div>`;
+                newProjectCard.addEventListener('click', startNewWorkflow);
+                taskHistoryList.appendChild(newProjectCard);
+                const tasks = await apiCall('/tasks', 'GET');
+                historyLoading.style.display = 'none';
+                if (tasks && tasks.length > 0) {
+                    tasks.forEach(task => {
+                        const taskCard = document.createElement('div');
+                        taskCard.className = 'entry-card task-history-item rounded-xl p-6 flex flex-col justify-end h-48';
+                        taskCard.dataset.taskName = task.folder_name;
+                        if (task.preview_image_url) {
+                            taskCard.style.backgroundImage = `url('${task.preview_image_url}')`;
+                            taskCard.classList.add('has-bg');
+                        }
+                        taskCard.innerHTML = `<div class="card-content"> <h3 class="font-bold text-xl text-white truncate">${task.title}</h3> <p class="text-gray-300 text-sm mt-1">点击加载此项目</p> </div>`;
+                        taskCard.addEventListener('click', (e) => handleLoadTask(e));
+                        taskHistoryList.appendChild(taskCard);
+                    });
+                }
+            }
+
+
+            async function handleLoadTask(event) {
+                const card = event.currentTarget;
+                document.querySelectorAll('.active-project-card').forEach(c => c.classList.remove('active-project-card'));
+                card.classList.add('active-project-card');
+                const taskName = card.dataset.taskName;
+                const pElement = card.querySelector('.card-content p');
+                const originalText = pElement.textContent;
+                pElement.textContent = '加载中...';
+                const projectData = await apiCall(`/task/${taskName}`, 'GET');
+                pElement.textContent = originalText;
+                if (projectData) {
+                    // --- MODIFIED: Load all data including the new character atlas ---
+                    globalBrief = projectData.brief;
+                    storyData = projectData.story;
+                    charactersData = projectData.characters_data || { characters: [] }; // Handle old projects
+                    previewImageResults = projectData.images?.image_urls || [];
+                    currentTaskName = taskName; // Store the task name
+                    showWorkflowView(projectData.story.title);
+                    step1.classList.remove('hidden');
+                    step2.classList.remove('hidden');
+
+                    // 只有当故事包含完整的6个段落时，才显示第三步
+                    if (storyData.segments && storyData.segments.length === 6) {
+                        step3.classList.remove('hidden');
+                        step3.classList.add('fade-in-initialized');
+                    } else {
+                        step3.classList.add('hidden');
+                    }
+
+                    // Render all components
+                    renderBrief(globalBrief);
+                    renderCharacterAtlas(charactersData); // Render the character atlas
+                    renderStory(storyData);
+
+                    if (previewImageResults.length > 0) {
+                        renderPreviews(previewImageResults);
+                        previewGallery.classList.remove('hidden');
+                    } else {
+                        previewGallery.classList.add('hidden');
+                    }
+
+                } else {
+                    card.classList.remove('active-project-card');
+                }
+            }
+
+            // --- 事件监听器 ---
+            generateBriefBtn.addEventListener('click', handleGenerateBrief);
+            generateStoryBtn.addEventListener('click', handleGenerateStory);
+            generatePreviewBtn.addEventListener('click', openConfirmationModal);
+            modalConfirmBtn.addEventListener('click', confirmAndGenerateImages);
+            modalCancelBtn.addEventListener('click', closeConfirmationModal);
+            loadTaskHistory();
+        });
+    </script>
 </body>
+
 </html>

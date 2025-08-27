@@ -33,16 +33,16 @@ if not QWEN_API_KEY:
 # 4. 角色图谱生成 (step2 - 第二步)作用: 角色设定师，将人物描述为可用于AI绘画的详细模板。对应代码位置: generate_story_from_ai() -> character_prompt
 # 5. 单幕创意内容生成 (step2 - 第三步)作用: 资深编剧和分镜师，将大纲扩写为详细情节。对应代码位置: generate_story_from_ai() -> creative_prompt
 # 7. AI绘画提示词精炼 (step3.1)作用: 提示词架构师，融合风格、场景和角色生成最终提示词。对应代码位置: refine_prompt_with_ai()
-model_for_hard = "qwen-plus"
+model_for_hard = "qwen-plus-2025-07-28"     #qwen-plus-2025-07-14   qwen-plus-2025-04-28
 
 # 简单模型
 # 3. 核心人物筛查 (step2 - 第二步)作用: 快速检索小助手，判断并提取核心人物。对应代码位置: generate_story_from_ai() -> core_detector_prompt
 # 6. 数据分析与量化 (step2 - 第三步)作用: 专业数据分析师，为剧情量化各项指数。对应代码位置: generate_story_from_ai() -> analytics_prompt
-model_for_easy = "qwen-turbo"
+model_for_easy = "qwen-plus-2025-07-28"     #"qwen-turbo"
 
 
 # 8. AI图像生成 (step3.2)作用: 图像生成模型，根据提示词生成图片。对应代码位置: call_wanx_sync_and_save()
-model_for_image = "wan2.2-t2i-flash"   # "wanx2.1-t2i-plus"  #  "wan2.2-t2i-plus"
+model_for_image = "qwen-image"       # "wanx2.1-t2i-plus" "wan2.2-t2i-plus" "qwen-image"
 
 # ====================================================================
 
@@ -74,6 +74,9 @@ class BriefDetails(BaseModel):
     style: str
     character: str
     world: str
+    original_style_keywords: str = ""
+    original_character_keywords: str = ""
+    original_world_keywords: str = ""
 
 
 class StoryRequest(BaseModel):
@@ -100,6 +103,7 @@ class Segment(BaseModel):
 class Story(BaseModel):
     title: str
     segments: List[Segment]
+    original_theme: str = ""
 
 
 # --- 新增：角色数据模型 ---
@@ -119,8 +123,14 @@ class ImageGenerationRequest(BaseModel):
     task_name: str
 
 
+class ImageResult(BaseModel):
+    final_prompt: str
+    url: str
+
 class ImageResponse(BaseModel):
-    image_urls: List[str]
+    image_urls: List[str] = []
+    image_results: List[ImageResult] = []
+    is_local_storage: bool = True
 
 
 class ProjectData(BaseModel):
@@ -156,20 +166,20 @@ app.add_middleware(
 # --- AI 服务 ---
 # step1:创建背景
 async def generate_brief_from_ai(keywords: BriefKeywords) -> BriefDetails:
-    """使用真实的AI模型根据关键词生成详细简报"""
+    """使用真实的AI模型根据关键词生成创意简报"""
     if not client:
         raise HTTPException(status_code=500, detail="OpenAI 客户端未初始化")
 
     prompt = f"""
-        你是一位顶级的创意总监和世界观架构师，擅长将简洁的关键词扩展成富有想象力和细节的短片创意简报。
-        你的任务是根据用户提供的三个核心关键词，为一部短片生成一个详细的、可指导后续视觉创作的“创意简报”。
+        你是一位短视频架构师，擅长将简洁的关键词扩展成适合短视频平台的创意简报。
+        你的任务是根据用户提供的三个核心关键词，为一部短片生成一个可指导后续短视频平台视觉创作的“创意简报”。
 
         特别要求：
-        1.  **[美术风格]**：在“style”描述的最前，必须明确提炼出5-8个用于在AI绘画中保持风格高度一致的“核心一致性关键词”，并用 "关键词:" 开头。随后，输出对该风格全量、详尽的描述，内容必须涵盖：色彩与光影、构图与运镜、线条与细节、渲染与质感。
-        2.  **[人物角色]**：在“character”描述的最前，必须明确提炼出5-8个用于在AI绘画中保持人物形象高度一致的“核心关键词”，并用 "关键词:" 开头。随后，输出对角色的故事化描述，重点阐述其核心身份、在故事中的功能、性格转变弧线、以及与核心主题的关联。不用具象的外貌细节，以避免与后续人物图谱生成环节冗余。
-        3.  **[核心主题]**：在“world”描述的最前，必须明确提炼出5-8个用于在AI绘画中保持故事核心主题的“核心一致性关键词”，并用 "关键词:" 开头。随后，输出对该世界观的详细描述，包括其核心情感、节奏张力、视觉氛围、画面冲击力，以及它如何适应短视频快节奏、高情绪起伏的风格。
+        1.  **[美术风格]**：在“style”描述的最前，必须明确提炼出3-5个用于在AI绘画中的“美术风格核心一致性关键词”，并用 "关键词:" 开头。随后，输出对该风格准确的描述，涵盖：色彩与光影、构图与运镜、线条与细节、渲染与质感。
+        2.  **[人物角色]**：在“character”描述的最前，必须明确提炼出3-5个用于在AI绘画中的“人物特点核心关键词”，并用 "关键词:" 开头。随后，输出对角色的故事化描述，重点阐述其核心身份、性格、人设等，不用具象的外貌细节，以避免与后续人物图谱生成环节冗余。
+        3.  **[核心主题]**：在“world”描述的最前，必须明确提炼出3-5个用于在AI绘画中的“主题核心一致性关键词”，并用 "关键词:" 开头。随后，输出对该世界观的描述，包括其节奏张力、视觉氛围、画面冲击力，要适应短视频风格。
 
-        请严格按照以下JSON格式返回，不要包含任何额外的说明性文本。
+        请严格按照以下JSON格式返回，不要包含任何额外的说明性文本，各50字左右。
 
         用户输入：
         - 美术风格关键词: {keywords.style} 
@@ -178,9 +188,9 @@ async def generate_brief_from_ai(keywords: BriefKeywords) -> BriefDetails:
 
         输出JSON格式：
         {{
-          "style": "...",  # 关键词:..., 换行后输出全量风格细节
-          "character": "...",  # 关键词:..., 换行后输出故事化角色描述
-          "world": "..."  # 关键词:..., 换行后输出核心主题与世界观氛围
+          "style": "...",  # 关键词:..., 换行后输出风格细节
+          "character": "...",  # 关键词:..., 换行后输出角色
+          "world": "..."  # 关键词:..., 换行后输出主题
         }}
         """
 
@@ -194,6 +204,10 @@ async def generate_brief_from_ai(keywords: BriefKeywords) -> BriefDetails:
 
         response_text = completion.choices[0].message.content
         brief_data = json.loads(response_text)
+        # 添加原始关键词
+        brief_data["original_style_keywords"] = keywords.style
+        brief_data["original_character_keywords"] = keywords.character
+        brief_data["original_world_keywords"] = keywords.world
         return BriefDetails(**brief_data)
     except (APIStatusError, APIConnectionError) as e:
         raise HTTPException(status_code=500, detail=f"AI 服务调用失败: {str(e)}")
@@ -255,7 +269,11 @@ async def generate_story_from_ai(request: StoryRequest) -> AsyncGenerator[str, N
         if len(plot_outline) != 6:
             raise ValueError("AI未能生成包含六幕的剧情大纲。")
 
-        yield json.dumps({"title": title}) + "\n"
+        # 将标题和原始主题一起返回
+        yield json.dumps({
+            "title": title,
+            "original_theme": request.theme  # 保存用户输入的原始主题
+        }) + "\n"
 
     except Exception as e:
         print(f"❌ 关键步骤失败：整体故事大纲生成失败: {e}")
@@ -600,12 +618,23 @@ async def generate_images_from_ai(request: ImageGenerationRequest) -> ImageRespo
 
     try:
         # 更新项目文件中的图片信息
-        loaded_project.images.image_urls = [result['url'] for result in successful_results]
+        image_urls = [result['url'] for result in successful_results]
+        loaded_project.images.image_urls = image_urls
+        
+        # 构建更完整的图像结果数据
+        project_dict = loaded_project.dict(by_alias=True)
+        # 添加 image_results 字段
+        project_dict['images']['image_results'] = [
+            {"final_prompt": result['final_prompt'], "url": result['url']} 
+            for result in successful_results
+        ]
+        # 确保 is_local_storage 字段存在
+        project_dict['images']['is_local_storage'] = True
+        
         with open(project_file_path, 'w', encoding='utf-8') as f:
-            json.dump(loaded_project.dict(by_alias=True), f, ensure_ascii=False, indent=4)
+            json.dump(project_dict, f, ensure_ascii=False, indent=4)
         print(f"✅ 项目数据已更新并保存到: {project_file_path}")
 
-        image_urls = [result['url'] for result in successful_results]
         return ImageResponse(image_urls=image_urls)
 
     except Exception as e:
@@ -675,11 +704,26 @@ async def save_project(request: ProjectSaveRequest):
         task_name = get_unique_save_directory(request.story.title)
         project_file_path = os.path.join(task_name, "project_data.json")
 
+        # 获取基础数据
+        brief_data = request.brief.dict()
+        story_data = request.story.dict()
+
+        # 确保 original_theme 字段存在，并移除 original_outline
+        if "original_theme" not in story_data and hasattr(request.story, "original_theme"):
+            story_data["original_theme"] = request.story.original_theme
+        if "original_outline" in story_data:
+            del story_data["original_outline"]
+
+        # 确保 original_*_keywords 字段存在
+        for key in ["original_style_keywords", "original_character_keywords", "original_world_keywords"]:
+            if key not in brief_data and hasattr(request.brief, key):
+                brief_data[key] = getattr(request.brief, key)
+
         # 将所有数据打包并保存到文件
         project_data = {
-            "brief": request.brief.dict(),
-            "story": request.story.dict(),
-            "images": {"image_urls": []}, # 图像URLs初始为空
+            "brief": brief_data,
+            "story": story_data,
+            "images": {"image_urls": [], "image_results": [], "is_local_storage": True}, # 图像信息初始为空
             "characters_data": request.characters_data.dict() if request.characters_data else {'characters': []}
         }
         with open(project_file_path, 'w', encoding='utf-8') as f:
